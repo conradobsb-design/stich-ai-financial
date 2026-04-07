@@ -25,6 +25,12 @@ const CATEGORY_COLORS = {
 const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
 const BUDGET_LIMIT = 25000;
 
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configurando o worker do PDF.js resolvido pela URL graças ao Vite
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
 export default function Dashboard({ user }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -62,20 +68,36 @@ export default function Dashboard({ user }) {
     if (!file) return;
 
     setLoading(true);
-    const formData = new FormData();
-    formData.append('data', file);
-    // ADICIONAMOS O USER ID PARA O N8N RECEBER
-    formData.append('user_id', user.id);
 
     try {
-      const response = await fetch(WEBHOOK_URL, {
+      let extractedText = "";
+
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          extractedText += content.items.map(item => item.str).join(' ') + '\n';
+        }
+      } else {
+        // Ler OFX ou CSV maravilhosamente
+        extractedText = await file.text();
+      }
+
+      // Envia o TEXTO escancarado para o N8N, e não um arquivo binário pesado
+      const formData = new FormData();
+      formData.append('text_data', extractedText);
+      formData.append('user_id', user.id);
+
+      await fetch(WEBHOOK_URL, {
         method: 'POST',
         body: formData,
       });
       // Refresh after Webhook is fully processed
       window.location.reload(); 
     } catch (error) {
-      console.error("Error uploading file:", error);
+      console.error("Error processing file:", error);
       alert("Erro ao processar extrato. Verifique o console.");
     } finally {
       setLoading(false);
