@@ -24,7 +24,7 @@ export default function Login() {
           password,
         });
         if (error) throw error;
-        setMessage({ text: 'Conta criada! Você já pode fazer login.', type: 'success' });
+        setMessage({ text: `Quase lá! \nEnviamos um link de confirmação para: ${email}. Abra sua caixa de entrada e confirme para acessar.`, type: 'success' });
         setIsSignUp(false);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
