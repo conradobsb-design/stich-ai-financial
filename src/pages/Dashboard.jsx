@@ -1,48 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, 
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend 
 } from 'recharts';
-import { 
-  Upload, PieChart as ChartIcon, TrendingUp, 
-  AlertTriangle, CheckCircle, Info, DollarSign, Database, LogOut
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 
 const CATEGORY_COLORS = {
-  'Alimentação': '#9d50bb',
-  'Transporte': '#6e48aa',
-  'Saúde': '#00f2fe',
-  'Moradia': '#00d2ff',
-  'Lazer': '#ffab00',
-  'Educação': '#ff4757',
-  'Investimentos': '#05ffa1',
-  'Outros': '#6b7280'
+  'Alimentação': '#003366',
+  'Transporte': '#001e40',
+  'Saúde': '#a7c8ff',
+  'Moradia': '#82f5c1',
+  'Lazer': '#006c4a',
+  'Educação': '#ffb2b9',
+  'Transferência Interna': '#737780',
+  'Investimentos': '#00d2ff',
+  'Outros': '#c3c6d1'
 };
 
 const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
-const BUDGET_LIMIT = 25000;
 
 import * as pdfjsLib from 'pdfjs-dist';
-
-// Configurando o worker do PDF.js resolvido pela URL graças ao Vite
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 export default function Dashboard({ user }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [totalSpent, setTotalSpent] = useState(0);
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
   const navigate = useNavigate();
 
-  // 1. Fetch data from Supabase on Mount
+  // Mês selecionado no formato "YYYY-MM"
+  const [selectedMonth, setSelectedMonth] = useState('');
+
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        // RLS will automatically filter by user_id, but we add an explicit .eq just in case
         const { data: history, error } = await supabase
           .from('transactions')
           .select('*')
@@ -50,11 +43,14 @@ export default function Dashboard({ user }) {
           .order('transaction_date', { ascending: false });
 
         if (error) throw error;
-        if (history) {
+        if (history && history.length > 0) {
           setData(history);
           setIsSupabaseConnected(true);
-          const total = history.reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
-          setTotalSpent(total);
+          
+          // Separa o mês mais recente para ser o padrão
+          const latestDate = history[0].transaction_date;
+          const monthKey = latestDate.substring(0, 7); // YYYY-MM
+          setSelectedMonth(monthKey);
         }
       } catch (err) {
         console.warn("Supabase fetch failed:", err.message);
@@ -74,18 +70,31 @@ export default function Dashboard({ user }) {
 
       if (file.name.toLowerCase().endsWith('.pdf')) {
         const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let pdf;
+        try {
+          pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        } catch (err) {
+          if (err.name === 'PasswordException') {
+             const pwd = window.prompt("Este extrato PDF está protegido por senha (comum em bancos). Digite a senha para desbloquear a leitura:");
+             if (!pwd) {
+               setLoading(false);
+               return; 
+             }
+             pdf = await pdfjsLib.getDocument({ data: arrayBuffer, password: pwd }).promise;
+          } else {
+            throw err; 
+          }
+        }
+
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
           extractedText += content.items.map(item => item.str).join(' ') + '\n';
         }
       } else {
-        // Ler OFX ou CSV maravilhosamente
         extractedText = await file.text();
       }
 
-      // Envia o TEXTO escancarado para o N8N, e não um arquivo binário pesado
       const formData = new FormData();
       formData.append('text_data', extractedText);
       formData.append('user_id', user.id);
@@ -94,7 +103,6 @@ export default function Dashboard({ user }) {
         method: 'POST',
         body: formData,
       });
-      // Refresh after Webhook is fully processed
       window.location.reload(); 
     } catch (error) {
       console.error("Error processing file:", error);
@@ -109,191 +117,257 @@ export default function Dashboard({ user }) {
     navigate('/login');
   };
 
-  const getAggregatedData = () => {
+  // Calcula os dados do mês atual
+  const monthlyData = useMemo(() => {
+    if (!selectedMonth) return [];
+    return data.filter(item => item.transaction_date.startsWith(selectedMonth));
+  }, [data, selectedMonth]);
+
+  // Extrai lista de meses disponíveis
+  const availableMonths = useMemo(() => {
+    const months = new Set(data.map(item => item.transaction_date.substring(0, 7)));
+    return Array.from(months).sort().reverse();
+  }, [data]);
+
+  // Agregações do mês
+  const aggregates = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    let internalTransfer = 0;
+
+    monthlyData.forEach(item => {
+      // Regra visual para ignorar transferencias internas nos totais
+      if (item.category === 'Transferência Interna' || item.description?.toLowerCase().includes('soraya') || item.description?.toLowerCase().includes('conrado')) {
+        internalTransfer += Math.abs(item.amount);
+      } else {
+        if (item.amount > 0) income += item.amount;
+        if (item.amount < 0) expense += Math.abs(item.amount);
+      }
+    });
+
+    return { income, expense, internalTransfer, balance: income - expense };
+  }, [monthlyData]);
+
+  // IA MOCK Insights based on current month math
+  const aiInsights = useMemo(() => {
+    const insights = [];
+    if (aggregates.expense > aggregates.income) {
+      insights.push("Alerta: Seus gastos neste mês estão superiores às entradas reais.");
+    } else if (aggregates.income > 0) {
+      insights.push("Bom trabalho! Você está operando no verde neste mês.");
+    }
+    
+    // Most expensive category
+    const cats = {};
+    monthlyData.forEach(t => {
+      if(t.amount < 0 && t.category !== 'Transferência Interna') cats[t.category] = (cats[t.category] || 0) + Math.abs(t.amount);
+    });
+    const biggestCat = Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
+    
+    if (biggestCat) {
+      insights.push(`IA Analítica: A categoria que mais consumiu recursos foi '${biggestCat[0]}' (R$ ${biggestCat[1].toFixed(2)}).`);
+    }
+
+    if (aggregates.internalTransfer > 0) {
+      insights.push(`Otimização: Detectamos R$ ${aggregates.internalTransfer.toFixed(2)} em transferências pessoais ignoradas nas métricas brutas.`);
+    }
+
+    return insights;
+  }, [aggregates, monthlyData]);
+
+  const getChartData = () => {
     const agg = {};
-    data.forEach(item => {
-      const category = item.category || 'Outros';
-      agg[category] = (agg[category] || 0) + Math.abs(item.amount);
+    monthlyData.forEach(item => {
+      if (item.amount < 0 && item.category !== 'Transferência Interna') {
+        const category = item.category || 'Outros';
+        agg[category] = (agg[category] || 0) + Math.abs(item.amount);
+      }
     });
     return Object.keys(agg).map(name => ({ name, value: agg[name] }));
   };
 
-  const budgetUsage = (totalSpent / BUDGET_LIMIT) * 100;
+  const formatMonth = (yyyy_mm) => {
+    if (!yyyy_mm) return '';
+    const [year, month] = yyyy_mm.split('-');
+    const date = new Date(year, month - 1);
+    return date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase();
+  };
 
   return (
-    <div className="stich-container">
-      <header style={{ marginBottom: '3rem', textAlign: 'center', position: 'relative' }}>
-        <button 
-          onClick={handleLogout}
-          style={{ position: 'absolute', top: 0, right: 0, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-        >
-          <LogOut size={16} /> Sair
-        </button>
-        <motion.h1 
-          initial={{ opacity: 0, y: -20 }} 
-          animate={{ opacity: 1, y: 0 }}
-          style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}
-        >
-          STICH AI
-        </motion.h1>
-        <p style={{ color: 'rgba(255,255,255,0.6)', fontWeight: '500' }}>
-          Gestão Financeira Inteligente ({user?.email})
-        </p>
-        {isSupabaseConnected && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 15px', borderRadius: '20px', background: 'rgba(5, 255, 161, 0.1)', color: '#05ffa1', fontSize: '0.8rem', marginTop: '1rem' }}>
-            <Database size={14} /> Dados Privados & Seguros via RLS
+    <div className="bg-surface text-on-surface min-h-screen pb-24">
+      
+      {/* TopAppBar */}
+      <header className="fixed top-0 w-full z-50 bg-[#f7f9fb]/80 backdrop-blur-xl flex justify-between items-center px-6 py-4 border-b border-outline-variant/20">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+            {user?.email?.[0]?.toUpperCase()}
           </div>
-        )}
+          <h1 className="text-xl font-bold tracking-tighter text-[#001e40] font-['Inter']">Extrato Co.</h1>
+        </div>
+        <div className="flex items-center gap-4">
+          <button onClick={handleLogout} className="p-2 rounded-full hover:bg-[#e0e3e5] transition-colors active:scale-95 duration-200">
+            <span className="material-symbols-outlined text-[#001e40]" data-icon="logout">logout</span>
+          </button>
+        </div>
       </header>
 
-      {/* Upload Zone */}
-      <motion.div 
-        className="glass-card"
-        style={{ maxWidth: '600px', margin: '0 auto 3rem auto', textAlign: 'center' }}
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-      >
-        <div className="upload-zone" onClick={() => document.getElementById('fileInput').click()}>
-          {loading ? (
-            <motion.div 
-              animate={{ rotate: 360 }} 
-              transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-              style={{ width: '40px', height: '40px', border: '4px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block' }}
-            />
-          ) : (
-            <Upload size={48} style={{ color: 'var(--primary)', marginBottom: '1rem' }} />
-          )}
-          <h2>{loading ? 'Processando...' : 'Novo Upload Gradual'}</h2>
-          <p>Selecione um arquivo CSV, PDF ou OFX para adicionar ao seu histórico de 5 anos.</p>
-          <input 
-            id="fileInput" 
-            type="file" 
-            accept=".csv, .pdf, .ofx" 
-            style={{ display: 'none' }} 
-            onChange={handleFileUpload}
-          />
-        </div>
-      </motion.div>
+      <main className="pt-24 px-6 max-w-5xl mx-auto space-y-8">
+        
+        {/* Controle Mensal & Boas vindas */}
+        <section className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div>
+            <p className="text-on-surface-variant font-medium tracking-wide uppercase text-[12px] mb-2">Visão Geral Financeira</p>
+            <h2 className="text-4xl font-extrabold tracking-tight text-primary">Olá, {user?.email?.split('@')[0]}</h2>
+          </div>
+          
+          <div className="bg-surface-container-low rounded-2xl p-2 flex items-center shadow-sm border border-outline-variant/30">
+            <span className="material-symbols-outlined text-primary ml-2 mr-2" data-icon="calendar_month">calendar_month</span>
+            <select 
+              className="bg-transparent border-none text-primary font-bold focus:ring-0 cursor-pointer pr-8"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            >
+              <option value="" disabled>Selecione um mês</option>
+              {availableMonths.map(m => (
+                <option key={m} value={m}>{formatMonth(m)}</option>
+              ))}
+            </select>
+          </div>
+        </section>
 
-      {data.length > 0 && !loading && (
-        <AnimatePresence>
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }}
-            className="dashboard-content"
+        {/* Upload Button */}
+        <section>
+          <div 
+            onClick={() => document.getElementById('fileInput').click()}
+            className="w-full bg-secondary-container/30 hover:bg-secondary-container/50 border-2 border-dashed border-secondary rounded-3xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 active:scale-[0.98]"
           >
-            <div className="dashboard-grid">
-              {/* Resumo Card */}
-              <div className="glass-card">
-                <h3>Gastos Totais (Histórico Pessoal)</h3>
-                <div className="stat-value">R$ {totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-                <div style={{ marginTop: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.8rem' }}>Meta Geral: R$ {BUDGET_LIMIT.toLocaleString()}</span>
+            {loading ? (
+               <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-secondary"></div>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-4xl text-secondary mb-2" data-icon="upload_file">upload_file</span>
+                <p className="font-bold text-secondary text-lg">Importar Novo Extrato (PDF/CSV/OFX)</p>
+                <p className="text-sm text-secondary/70">Arraste aqui ou clique para atualizar seu banco de dados</p>
+              </>
+            )}
+             <input id="fileInput" type="file" accept=".csv, .pdf, .ofx" style={{ display: 'none' }} onChange={handleFileUpload} />
+          </div>
+        </section>
+
+        {/* Main Ledger Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          
+          {/* Total Balance Card (Bento Large) */}
+          <div className="md:col-span-8 bg-gradient-to-br from-primary to-primary-container p-8 rounded-[2rem] text-white flex flex-col justify-between min-h-[320px] relative overflow-hidden shadow-xl">
+            <div className="relative z-10">
+              <span className="label-md uppercase tracking-[0.1em] text-primary-fixed-dim font-semibold">Saldo Líquido do Mês</span>
+              <div className="text-[3.5rem] leading-none font-extrabold tracking-tight mt-4">
+                R$ {aggregates.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+            
+            {/* Simple Geometric Graphic Bleed */}
+            <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+            
+            <div className="relative z-10 flex justify-between items-end mt-8">
+              <div className="flex gap-4">
+                <div className="bg-white/10 p-4 rounded-xl backdrop-blur-md">
+                  <p className="text-[10px] uppercase opacity-70 mb-1">Receitas</p>
+                  <p className="font-bold text-secondary-fixed">+ R$ {aggregates.income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                </div>
+                <div className="bg-white/10 p-4 rounded-xl backdrop-blur-md">
+                  <p className="text-[10px] uppercase opacity-70 mb-1">Despesas</p>
+                  <p className="font-bold text-tertiary-fixed-dim">- R$ {aggregates.expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-5xl opacity-30" data-icon="account_balance_wallet">account_balance_wallet</span>
+            </div>
+          </div>
+
+          {/* AI Insights Card */}
+          <div className="md:col-span-4 bg-surface-container-lowest p-6 rounded-[2rem] flex flex-col border border-outline-variant/30 shadow-md">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-bold text-lg tracking-tight text-primary flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary" data-icon="auto_awesome">auto_awesome</span>
+                Extrato AI Insights
+              </h3>
+            </div>
+            <div className="space-y-4 flex-1 flex flex-col justify-center">
+              {aiInsights.length === 0 ? (
+                <p className="text-sm text-outline italic">Importe extratos para obter dados inteligentes.</p>
+              ) : (
+                aiInsights.map((insight, idx) => (
+                  <div key={idx} className="bg-surface p-4 rounded-xl border-l-4 border-secondary text-sm font-medium text-on-surface-variant">
+                    {insight}
                   </div>
-                  <div style={{ height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(budgetUsage / 12, 100)}%` }} // Simplified for annual comparison
-                      style={{ 
-                        height: '100%', 
-                        background: 'linear-gradient(to right, var(--accent), var(--primary))' 
-                      }}
+                ))
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Charts & Spending Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          <div className="md:col-span-6 bg-surface-container-lowest p-8 rounded-[2rem] shadow-md border border-outline-variant/30">
+            <h3 className="font-bold text-xl tracking-tight mb-8">Despesas por Categoria</h3>
+            <div className="h-64">
+               <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={getChartData()}
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {getChartData().map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name] || '#8884d8'} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ background: '#ffffff', border: '1px solid #e0e3e5', borderRadius: '1rem', color: '#001e40', fontWeight: 'bold' }} 
+                      formatter={(val) => `R$ ${val.toLocaleString('pt-BR')}`}
                     />
-                  </div>
-                </div>
-              </div>
-
-              {/* Status Card */}
-              <div className="glass-card">
-                <h3>Tamanho da sua Base</h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
-                  <Database size={40} color="#05ffa1" />
-                  <div>
-                    <h4 style={{ margin: 0 }}>Histórico Consolidado</h4>
-                    <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.7 }}>Você possui {data.length} transações na sua conta.</p>
-                  </div>
-                </div>
-              </div>
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
             </div>
+          </div>
 
-            <div className="dashboard-grid" style={{ gridTemplateColumns: 'minmax(300px, 1fr) minmax(300px, 1.5fr)' }}>
-              {/* Categories Chart */}
-              <div className="glass-card">
-                <h3>Insights por Categoria</h3>
-                <div className="chart-container">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={getAggregatedData()}
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {getAggregatedData().map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name] || '#8884d8'} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ background: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }} 
-                        formatter={(val) => `R$ ${val.toLocaleString()}`}
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* AI Insights Card */}
-              <div className="glass-card">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                  <TrendingUp size={24} style={{ color: 'var(--accent)' }} />
-                  <h3>Visão Geral Estratégica (Privada)</h3>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <p style={{ lineHeight: '1.6', fontSize: '1.1rem', fontStyle: 'italic' }}>
-                    O Stich AI Agent está analisando seu histórico privado, isolado via RLS, para identificar padrões únicos do seu comportamento financeiro!
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Transactions List */}
-            <div className="glass-card" style={{ marginTop: '2rem' }}>
-              <h3>Todas as Suas Transações</h3>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-                  <thead>
-                    <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--glass-border)' }}>
-                      <th style={{ padding: '1rem' }}>Data</th>
-                      <th style={{ padding: '1rem' }}>Descrição</th>
-                      <th style={{ padding: '1rem' }}>Categoria</th>
-                      <th style={{ padding: '1rem', textAlign: 'right' }}>Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.slice(0, 50).map((item, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                        <td style={{ padding: '1rem', color: 'rgba(255,255,255,0.6)' }}>{new Date(item.transaction_date).toLocaleDateString()}</td>
-                        <td style={{ padding: '1rem', fontWeight: 'bold' }}>{item.description}</td>
-                        <td style={{ padding: '1rem' }}>
-                          <span className="badge" style={{ background: `${CATEGORY_COLORS[item.category] || '#333'}33`, color: CATEGORY_COLORS[item.category] || '#999' }}>
-                            {item.category}
+          <div className="md:col-span-6 bg-surface-container-lowest p-8 rounded-[2rem] shadow-md border border-outline-variant/30 overflow-hidden flex flex-col">
+            <h3 className="font-bold text-xl tracking-tight mb-4">Transações de {formatMonth(selectedMonth)}</h3>
+             <div className="flex-1 overflow-y-auto pr-2 pb-4 space-y-4 max-h-[300px]">
+                {monthlyData.length === 0 ? (
+                  <p className="text-on-surface-variant italic">Nenhuma transação encontrada neste período.</p>
+                ) : (
+                  monthlyData.map((item, i) => {
+                    const isInternal = item.category === 'Transferência Interna' || item.description?.toLowerCase().includes('soraya') || item.description?.toLowerCase().includes('conrado');
+                    const isPositive = item.amount > 0;
+                    return (
+                      <div key={i} className={`flex items-center gap-4 p-3 rounded-xl ${isInternal ? 'bg-surface opacity-70' : 'bg-surface'}`}>
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isInternal ? 'bg-surface-dim text-on-surface-variant' : (isPositive ? 'bg-secondary-container text-secondary' : 'bg-primary-fixed text-primary')}`}>
+                          <span className="material-symbols-outlined">
+                            {isInternal ? 'sync_alt' : (isPositive ? 'arrow_downward' : 'shopping_bag')}
                           </span>
-                        </td>
-                        <td style={{ padding: '1rem', textAlign: 'right', color: item.amount < 0 ? '#ff4757' : '#00f2fe' }}>
-                          R$ {Math.abs(item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-      )}
+                        </div>
+                        <div className="flex-1 truncate">
+                          <p className="font-bold text-sm truncate" title={item.description}>{item.description}</p>
+                          <p className="text-xs text-on-surface-variant font-medium">{isInternal ? 'Isento (Conta Interna)' : item.category}</p>
+                        </div>
+                        <p className={`font-bold text-sm whitespace-nowrap ${isInternal ? 'text-on-surface-variant' : (isPositive ? 'text-secondary' : 'text-error')}`}>
+                          {isPositive ? '+' : ''} R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    )
+                  })
+                )}
+             </div>
+          </div>
+        </div>
+
+      </main>
+
     </div>
   );
 }

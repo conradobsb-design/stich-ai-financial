@@ -42,9 +42,9 @@ export default function Login() {
   };
 
   return (
-    <div className="stich-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '2rem' }}>
+    <div className="bg-surface text-on-surface flex items-center justify-center min-h-screen p-8">
       <motion.div 
-        className="glass-card"
+        className="bg-surface-container-low shadow-xl border border-outline-variant/30 rounded-3xl"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -54,12 +54,12 @@ export default function Login() {
           <motion.h1 
             initial={{ scale: 0.9 }} 
             animate={{ scale: 1 }}
-            style={{ fontSize: '2.5rem', marginBottom: '0.5rem', background: 'linear-gradient(to right, #00f2fe, #4facfe)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
+            className="text-4xl font-extrabold tracking-tight text-primary mb-2 font-['Inter']"
           >
-            STICH AI
+            Extrato Co.
           </motion.h1>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem' }}>
-            {isSignUp ? 'Crie sua conta para acessar o dashboard.' : 'Autentique-se para entrar no seu painel.'}
+          <p className="text-on-surface-variant text-sm font-medium">
+            {isSignUp ? 'Crie sua conta corporativa para acessar.' : 'Autentique-se de forma segura em seu cofre.'}
           </p>
         </div>
 
