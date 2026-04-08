@@ -70,23 +70,21 @@ export default function Dashboard({ user }) {
       let extractedText = "";
 
       if (file.name.toLowerCase().endsWith('.pdf')) {
-        const arrayBuffer = await file.arrayBuffer();
+        const fileUrl = URL.createObjectURL(file);
         let pdf;
         try {
-          // Cria uma cópia do buffer, pois o pdfjsLib transfere (detach) a posse do buffer original para o worker
-          const bufferCopy = arrayBuffer.slice(0);
-          pdf = await pdfjsLib.getDocument({ data: bufferCopy }).promise;
+          pdf = await pdfjsLib.getDocument({ url: fileUrl }).promise;
         } catch (err) {
           if (err.name === 'PasswordException') {
              const pwd = window.prompt("Este extrato PDF está protegido por senha (comum em bancos). Digite a senha para desbloquear a leitura:");
              if (!pwd) {
                setLoading(false);
+               URL.revokeObjectURL(fileUrl);
                return; 
              }
-             // Re-lê o arquivo para um novo buffer, pois o primeiro foi consumido
-             const newBuffer = await file.arrayBuffer();
-             pdf = await pdfjsLib.getDocument({ data: newBuffer, password: pwd }).promise;
+             pdf = await pdfjsLib.getDocument({ url: fileUrl, password: pwd }).promise;
           } else {
+            URL.revokeObjectURL(fileUrl);
             throw err; 
           }
         }
@@ -96,6 +94,7 @@ export default function Dashboard({ user }) {
           const content = await page.getTextContent();
           extractedText += content.items.map(item => item.str).join(' ') + '\n';
         }
+        URL.revokeObjectURL(fileUrl);
       } else {
         extractedText = await file.text();
       }
