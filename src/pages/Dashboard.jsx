@@ -72,7 +72,9 @@ export default function Dashboard({ user }) {
         const arrayBuffer = await file.arrayBuffer();
         let pdf;
         try {
-          pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          // Cria uma cópia do buffer, pois o pdfjsLib transfere (detach) a posse do buffer original para o worker
+          const bufferCopy = arrayBuffer.slice(0);
+          pdf = await pdfjsLib.getDocument({ data: bufferCopy }).promise;
         } catch (err) {
           if (err.name === 'PasswordException') {
              const pwd = window.prompt("Este extrato PDF está protegido por senha (comum em bancos). Digite a senha para desbloquear a leitura:");
@@ -80,7 +82,9 @@ export default function Dashboard({ user }) {
                setLoading(false);
                return; 
              }
-             pdf = await pdfjsLib.getDocument({ data: arrayBuffer, password: pwd }).promise;
+             // Re-lê o arquivo para um novo buffer, pois o primeiro foi consumido
+             const newBuffer = await file.arrayBuffer();
+             pdf = await pdfjsLib.getDocument({ data: newBuffer, password: pwd }).promise;
           } else {
             throw err; 
           }
