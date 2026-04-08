@@ -32,6 +32,7 @@ export default function Dashboard({ user }) {
 
   // Mês selecionado no formato "YYYY-MM"
   const [selectedMonth, setSelectedMonth] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -124,8 +125,18 @@ export default function Dashboard({ user }) {
   // Calcula os dados do mês atual
   const monthlyData = useMemo(() => {
     if (!selectedMonth) return [];
-    return data.filter(item => item.transaction_date.startsWith(selectedMonth));
-  }, [data, selectedMonth]);
+    let filtered = data.filter(item => item.transaction_date.startsWith(selectedMonth));
+    
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      filtered = filtered.filter(item => 
+        (item.description && item.description.toLowerCase().includes(lower)) ||
+        (item.category && item.category.toLowerCase().includes(lower)) ||
+        (item.bank && item.bank.toLowerCase().includes(lower))
+      );
+    }
+    return filtered;
+  }, [data, selectedMonth, searchTerm]);
 
   // Extrai lista de meses disponíveis
   const availableMonths = useMemo(() => {
@@ -137,19 +148,25 @@ export default function Dashboard({ user }) {
   const aggregates = useMemo(() => {
     let income = 0;
     let expense = 0;
-    let internalTransfer = 0;
+    let neutralMovement = 0;
 
     monthlyData.forEach(item => {
       // Regra visual para ignorar transferencias internas nos totais
-      if (item.category === 'Transferência Interna' || item.description?.toLowerCase().includes('soraya') || item.description?.toLowerCase().includes('conrado')) {
-        internalTransfer += Math.abs(item.amount);
+      const isNeutral = item.category === 'Transferência Interna' 
+        || item.category === 'Investimentos' 
+        || item.category === 'Pagamento de Fatura'
+        || item.description?.toLowerCase().includes('soraya') 
+        || item.description?.toLowerCase().includes('conrado');
+
+      if (isNeutral) {
+        neutralMovement += Math.abs(item.amount);
       } else {
         if (item.amount > 0) income += item.amount;
         if (item.amount < 0) expense += Math.abs(item.amount);
       }
     });
 
-    return { income, expense, internalTransfer, balance: income - expense };
+    return { income, expense, neutralMovement, balance: income - expense };
   }, [monthlyData]);
 
   // IA MOCK Insights based on current month math
@@ -164,7 +181,8 @@ export default function Dashboard({ user }) {
     // Most expensive category
     const cats = {};
     monthlyData.forEach(t => {
-      if(t.amount < 0 && t.category !== 'Transferência Interna') cats[t.category] = (cats[t.category] || 0) + Math.abs(t.amount);
+      const isNeutral = t.category === 'Transferência Interna' || t.category === 'Investimentos' || t.category === 'Pagamento de Fatura';
+      if(t.amount < 0 && !isNeutral) cats[t.category] = (cats[t.category] || 0) + Math.abs(t.amount);
     });
     const biggestCat = Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
     
@@ -172,8 +190,8 @@ export default function Dashboard({ user }) {
       insights.push(`IA Analítica: A categoria que mais consumiu recursos foi '${biggestCat[0]}' (R$ ${biggestCat[1].toFixed(2)}).`);
     }
 
-    if (aggregates.internalTransfer > 0) {
-      insights.push(`Otimização: Detectamos R$ ${aggregates.internalTransfer.toFixed(2)} em transferências pessoais ignoradas nas métricas brutas.`);
+    if (aggregates.neutralMovement > 0) {
+      insights.push(`Otimização: Detectamos R$ ${aggregates.neutralMovement.toFixed(2)} em movimentações isentas (Faturas, Investimentos ou Internas) não deduzidas das métricas brutas.`);
     }
 
     return insights;
@@ -182,7 +200,8 @@ export default function Dashboard({ user }) {
   const getChartData = () => {
     const agg = {};
     monthlyData.forEach(item => {
-      if (item.amount < 0 && item.category !== 'Transferência Interna') {
+      const isNeutral = item.category === 'Transferência Interna' || item.category === 'Investimentos' || item.category === 'Pagamento de Fatura';
+      if (item.amount < 0 && !isNeutral) {
         const category = item.category || 'Outros';
         agg[category] = (agg[category] || 0) + Math.abs(item.amount);
       }
@@ -340,26 +359,46 @@ export default function Dashboard({ user }) {
           </div>
 
           <div className="md:col-span-6 bg-surface-container-lowest p-8 rounded-[2rem] shadow-md border border-outline-variant/30 overflow-hidden flex flex-col">
-            <h3 className="font-bold text-xl tracking-tight mb-4">Transações de {formatMonth(selectedMonth)}</h3>
+            <div className="flex justify-between items-center mb-4 gap-4">
+              <h3 className="font-bold text-xl tracking-tight leading-loose w-1/2">Transações de {formatMonth(selectedMonth)}</h3>
+              <div className="relative flex-1">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm" data-icon="search">search</span>
+                <input 
+                  type="text" 
+                  placeholder="Buscar..." 
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full bg-surface-container-low py-2 pl-9 pr-3 rounded-full text-sm border border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-on-surface-variant"
+                />
+              </div>
+            </div>
              <div className="flex-1 overflow-y-auto pr-2 pb-4 space-y-4 max-h-[300px]">
                 {monthlyData.length === 0 ? (
                   <p className="text-on-surface-variant italic">Nenhuma transação encontrada neste período.</p>
                 ) : (
                   monthlyData.map((item, i) => {
-                    const isInternal = item.category === 'Transferência Interna' || item.description?.toLowerCase().includes('soraya') || item.description?.toLowerCase().includes('conrado');
+                    const isNeutral = item.category === 'Transferência Interna' 
+                      || item.category === 'Investimentos' 
+                      || item.category === 'Pagamento de Fatura'
+                      || item.description?.toLowerCase().includes('soraya') 
+                      || item.description?.toLowerCase().includes('conrado');
+                      
                     const isPositive = item.amount > 0;
                     return (
-                      <div key={i} className={`flex items-center gap-4 p-3 rounded-xl ${isInternal ? 'bg-surface opacity-70' : 'bg-surface'}`}>
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isInternal ? 'bg-surface-dim text-on-surface-variant' : (isPositive ? 'bg-secondary-container text-secondary' : 'bg-primary-fixed text-primary')}`}>
+                      <div key={i} className={`flex items-center gap-4 p-3 rounded-xl ${isNeutral ? 'bg-surface opacity-70' : 'bg-surface'}`}>
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isNeutral ? 'bg-surface-dim text-on-surface-variant' : (isPositive ? 'bg-secondary-container text-secondary' : 'bg-primary-fixed text-primary')}`}>
                           <span className="material-symbols-outlined">
-                            {isInternal ? 'sync_alt' : (isPositive ? 'arrow_downward' : 'shopping_bag')}
+                            {isNeutral ? 'sync_alt' : (isPositive ? 'arrow_downward' : 'shopping_bag')}
                           </span>
                         </div>
                         <div className="flex-1 truncate">
                           <p className="font-bold text-sm truncate" title={item.description}>{item.description}</p>
-                          <p className="text-xs text-on-surface-variant font-medium">{isInternal ? 'Isento (Conta Interna)' : item.category}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-on-surface-variant font-medium bg-surface-dim px-2 py-0.5 rounded-md">{isNeutral ? 'Isento' : item.category}</span>
+                            <span className="text-[10px] text-primary/70 font-bold uppercase border border-primary/20 bg-primary/5 px-1.5 py-0.5 rounded-sm truncate max-w-[120px]" title={item.bank}>{item.bank || 'Desconhecido'}</span>
+                          </div>
                         </div>
-                        <p className={`font-bold text-sm whitespace-nowrap ${isInternal ? 'text-on-surface-variant' : (isPositive ? 'text-secondary' : 'text-error')}`}>
+                        <p className={`font-bold text-sm whitespace-nowrap ${isNeutral ? 'text-on-surface-variant' : (isPositive ? 'text-secondary' : 'text-error')}`}>
                           {isPositive ? '+' : ''} R$ {item.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                       </div>
