@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { motion } from 'framer-motion';
-import { Mail, Lock, LogIn, UserPlus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mail, Lock, LogIn, UserPlus, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
@@ -24,7 +24,7 @@ export default function Login() {
           password,
         });
         if (error) throw error;
-        setMessage({ text: `Quase lá! \nEnviamos um link de confirmação para: ${email}. Abra sua caixa de entrada e confirme para acessar.`, type: 'success' });
+        setMessage({ text: `Quase lá! \nEnviamos um link de confirmação para: ${email}. Verifique sua caixa de entrada.`, type: 'success' });
         setIsSignUp(false);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -42,130 +42,107 @@ export default function Login() {
   };
 
   return (
-    <div className="bg-surface text-on-surface flex items-center justify-center min-h-screen p-8">
+    <div className="mesh-bg relative min-h-screen flex items-center justify-center p-6 overflow-hidden">
+      
+      {/* Decorative Orbs */}
+      <div className="absolute top-1/4 -left-20 w-80 h-80 bg-primary/20 rounded-full blur-[100px] animate-pulse"></div>
+      <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-tertiary/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+
       <motion.div 
-        className="bg-surface-container-low shadow-xl border border-outline-variant/30 rounded-3xl"
-        initial={{ opacity: 0, y: 20 }}
+        className="glass-card w-full max-w-md p-10 rounded-[2.5rem] relative z-10"
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        style={{ width: '100%', maxWidth: '420px', padding: '3rem 2rem' }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div className="text-center mb-10">
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2, type: 'spring' }}
+            className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-primary/30"
+          >
+            <ShieldCheck className="text-secondary" size={32} />
+          </motion.div>
+          
           <motion.h1 
-            initial={{ scale: 0.9 }} 
-            animate={{ scale: 1 }}
-            className="text-4xl font-extrabold tracking-tight text-primary mb-2 font-['Inter']"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-4xl font-extrabold tracking-tighter text-white mb-2 font-['Inter'] text-glow"
           >
             Extrato Co.
           </motion.h1>
           <p className="text-on-surface-variant text-sm font-medium">
-            {isSignUp ? 'Crie sua conta corporativa para acessar.' : 'Autentique-se de forma segura em seu cofre.'}
+            {isSignUp ? 'Crie sua conta corporativa' : 'Painel Financeiro de Gestão Premium'}
           </p>
         </div>
 
-        {message.text && (
-          <div style={{ 
-            padding: '1rem', 
-            borderRadius: '8px', 
-            marginBottom: '1.5rem', 
-            background: message.type === 'error' ? 'rgba(255, 71, 87, 0.1)' : 'rgba(5, 255, 161, 0.1)',
-            color: message.type === 'error' ? '#ff4757' : '#05ffa1',
-            border: `1px solid ${message.type === 'error' ? 'rgba(255, 71, 87, 0.2)' : 'rgba(5, 255, 161, 0.2)'}`,
-            fontSize: '0.9rem',
-            textAlign: 'center'
-          }}>
-            {message.text}
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {message.text && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className={`p-4 rounded-xl mb-6 text-sm text-center font-medium border ${
+                message.type === 'error' 
+                ? 'bg-error/10 text-error border-error/20' 
+                : 'bg-success/10 text-success border-success/20'
+              }`}
+            >
+              {message.text}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-          <div style={{ position: 'relative' }}>
-            <Mail size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
+        <form onSubmit={handleAuth} className="space-y-5">
+          <div className="relative group">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-secondary transition-colors" size={18} />
             <input
               type="email"
-              placeholder="Seu melhor e-mail"
+              placeholder="Seu e-mail"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              style={{
-                width: '100%',
-                padding: '1rem 1rem 1rem 3rem',
-                background: 'rgba(0,0,0,0.2)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '12px',
-                color: '#fff',
-                fontSize: '1rem',
-                outline: 'none',
-                transition: 'all 0.3s ease'
-              }}
-              onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
-              onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+              className="w-full bg-background/50 border border-outline-variant py-4 pl-12 pr-4 rounded-2xl text-white outline-none focus:border-secondary/50 focus:ring-4 focus:ring-secondary/10 transition-all placeholder:text-on-surface-variant/50"
             />
           </div>
 
-          <div style={{ position: 'relative' }}>
-            <Lock size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
+          <div className="relative group">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-secondary transition-colors" size={18} />
             <input
               type="password"
-              placeholder="Senha de acesso"
+              placeholder="Sua senha"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              style={{
-                width: '100%',
-                padding: '1rem 1rem 1rem 3rem',
-                background: 'rgba(0,0,0,0.2)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '12px',
-                color: '#fff',
-                fontSize: '1rem',
-                outline: 'none',
-                transition: 'all 0.3s ease'
-              }}
-              onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
-              onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+              className="w-full bg-background/50 border border-outline-variant py-4 pl-12 pr-4 rounded-2xl text-white outline-none focus:border-secondary/50 focus:ring-4 focus:ring-secondary/10 transition-all placeholder:text-on-surface-variant/50"
             />
           </div>
 
           <motion.button
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(14, 165, 233, 0.3)' }}
             whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={loading}
-            style={{
-              padding: '1rem',
-              marginTop: '0.5rem',
-              background: 'linear-gradient(to right, var(--accent), var(--primary))',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '12px',
-              fontSize: '1rem',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              opacity: loading ? 0.7 : 1
-            }}
+            className="w-full bg-gradient-to-r from-primary to-tertiary p-4 rounded-2xl text-white font-bold flex items-center justify-center gap-3 shadow-lg shadow-primary/20 disabled:opacity-50 transition-all mt-4"
           >
-            {loading ? <div className="spinner" style={{ width: '20px', height: '20px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /> : (isSignUp ? <><UserPlus size={18} /> Criar Conta</> : <><LogIn size={18} /> Acessar Dashboard</>)}
+            {loading ? (
+              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                {isSignUp ? <UserPlus size={20} /> : <LogIn size={20} />}
+                <span>{isSignUp ? 'Cadastrar Agora' : 'Acesse sua Conta'}</span>
+              </>
+            )}
           </motion.button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+        <div className="text-center mt-8">
           <button
             onClick={() => { setIsSignUp(!isSignUp); setMessage({ text: '', type: '' }); }}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'rgba(255,255,255,0.6)',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              textDecoration: 'underline',
-            }}
+            className="text-on-surface-variant hover:text-white text-sm font-medium transition-colors underline decoration-primary/30 underline-offset-4"
           >
-            {isSignUp ? 'Já tem uma conta? Faça Login' : 'Ainda não é membro? Crie uma conta'}
+            {isSignUp ? 'Já possui acesso? Entre aqui' : 'Novo por aqui? Crie sua conta'}
           </button>
         </div>
       </motion.div>
