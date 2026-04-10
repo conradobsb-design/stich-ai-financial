@@ -446,7 +446,7 @@ export default function Dashboard({ user }) {
                 </div>
                 <div className="flex-1 min-w-[120px] glass p-5 rounded-3xl border-l-4" style={{ borderLeftColor: '#ef4444' }}>
                   <div className="flex items-center gap-2 text-error font-bold text-[10px] uppercase mb-1">
-                    <ArrowDownRight size={12} /> Despesas
+                    <ArrowDownRight size={12} /> Saídas
                   </div>
                   <p className="text-xl font-black text-white">R$ {aggregates.expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                 </div>
@@ -627,7 +627,7 @@ export default function Dashboard({ user }) {
               {[
                 { key: 'todos',    label: 'Todos' },
                 { key: 'receitas', label: 'Receitas' },
-                { key: 'despesas', label: 'Despesas' },
+                { key: 'despesas', label: 'Saídas' },
               ].map(({ key, label }) => (
                 <button
                   key={key}
