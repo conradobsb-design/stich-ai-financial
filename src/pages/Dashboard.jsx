@@ -54,6 +54,7 @@ const BILL_PAYMENT_PATTERNS = [
   'debito automatico fatura',
   'boleto fatura',       // "boleto fatura" is specific enough — it's a bill boleto
   'pagto. boleto cartao',
+  'efetuado (fatura)',   // Sicredi: "Pagamento efetuado (fatura)"
 ];
 
 // Patterns for internal/personal transfers (not real income or expense)
@@ -737,7 +738,11 @@ export default function Dashboard({ user }) {
                           <p className={`font-black text-sm whitespace-nowrap ${styles.color}`}>
                             {isPos ? '+' : ''} R$ {Math.abs(item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
-                          <p className="text-[10px] font-semibold text-white/50 mt-0.5">{new Date(item.transaction_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                          <p className="text-[10px] font-semibold text-white/50 mt-0.5">
+            {item.transaction_date
+              ? new Date(item.transaction_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+              : 'Data não registrada'}
+          </p>
                         </div>
                       </motion.div>
                     );
