@@ -626,7 +626,7 @@ export default function Dashboard({ user }) {
             <div className="flex gap-2 mb-5">
               {[
                 { key: 'todos',    label: 'Todos' },
-                { key: 'receitas', label: 'Receitas' },
+                { key: 'receitas', label: 'Entradas' },
                 { key: 'despesas', label: 'Saídas' },
               ].map(({ key, label }) => (
                 <button
