@@ -172,8 +172,8 @@ export default function Dashboard({ user }) {
         if (history && history.length > 0) {
           setData(history);
           setIsSupabaseConnected(true);
-          const latestDate = history[0].transaction_date;
-          setSelectedMonth(latestDate.substring(0, 7));
+          const latestDate = history.find(h => h.transaction_date)?.transaction_date;
+          if (latestDate) setSelectedMonth(latestDate.substring(0, 7));
         }
       } catch (err) {
         console.warn("Supabase fetch failed:", err.message);
@@ -268,7 +268,7 @@ export default function Dashboard({ user }) {
 
   const monthlyData = useMemo(() => {
     if (!selectedMonth) return [];
-    let filtered = data.filter(item => item.transaction_date.startsWith(selectedMonth));
+    let filtered = data.filter(item => item.transaction_date?.startsWith(selectedMonth));
     if (searchTerm) {
       const lower = searchTerm.toLowerCase();
       filtered = filtered.filter(item => 
@@ -281,7 +281,7 @@ export default function Dashboard({ user }) {
   }, [data, selectedMonth, searchTerm]);
 
   const availableMonths = useMemo(() => {
-    const months = new Set(data.map(item => item.transaction_date.substring(0, 7)));
+    const months = new Set(data.filter(item => item.transaction_date).map(item => item.transaction_date.substring(0, 7)));
     return Array.from(months).sort().reverse();
   }, [data]);
 
@@ -457,39 +457,32 @@ export default function Dashboard({ user }) {
               <div className="space-y-3">
                 {(() => {
                   const insights = [];
-                  const { income, expense, savings, billPayments, balance } = aggregates;
-                  
+                  const { income, expense, savings, balance } = aggregates;
+
                   // Insight 1: Spending vs Income
                   if (expense > income && income > 0) {
                     insights.push({
                       icon: AlertTriangle,
                       color: 'border-l-error bg-error/5',
                       textColor: 'text-error',
-                      text: `Seus gastos reais (R$ ${expense.toLocaleString('pt-BR')}) superaram as entradas este mês.`
+                      text: `Seus gastos (R$ ${expense.toLocaleString('pt-BR')}) superaram as entradas este mês.`
                     });
                   } else if (income > 0) {
                     insights.push({
                       icon: Shield,
                       color: 'border-l-success bg-success/5',
                       textColor: 'text-success',
-                      text: `Saúde financeira estável. Você utilizou ${( (expense/income)*100 ).toFixed(0)}% da sua receita real.`
+                      text: `Saúde financeira estável. Você utilizou ${( (expense/income)*100 ).toFixed(0)}% da sua renda este mês.`
                     });
                   }
 
-                  // Insight 2: Contextual Intelligence regarding Bills
-                  if (billPayments > 0 && hasCardItems) {
+                  // Insight 2: Savings
+                  if (savings > 0) {
                     insights.push({
                       icon: Zap,
-                      color: 'border-l-nubank bg-nubank/5',
-                      textColor: 'text-nubank-light',
-                      text: `Inteligência Auditiva: Detectamos faturas e o detalhamento do cartão. R$ ${billPayments.toLocaleString('pt-BR')} foram deduzidos para evitar duplicidade.`
-                    });
-                  } else if ( aggregates.billPayments > 0 && !hasCardItems ) {
-                    insights.push({
-                        icon: Info,
-                        color: 'border-l-yellow-400 bg-yellow-400/5',
-                        textColor: 'text-yellow-400',
-                        text: `Atenção: Como você não importou a fatura, o valor total do boleto está sendo contado como despesa.`
+                      color: 'border-l-primary bg-primary/5',
+                      textColor: 'text-primary',
+                      text: `Você guardou R$ ${savings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em investimentos e poupança este mês.`
                     });
                   }
 
@@ -663,11 +656,7 @@ export default function Dashboard({ user }) {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-white break-words leading-snug group-hover:text-primary transition-colors">{item.description}</p>
                           <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${
-                              cls === 'billPayment' || (cls === 'expense' && isBillPattern)
-                                ? 'bg-white/10 border-white/20 text-white/60'
-                                : 'bg-white/5 border-white/5 text-on-surface-variant/80'
-                            }`}>
+                            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border bg-white/5 border-white/5 text-on-surface-variant/80">
                               {styles.label}
                             </span>
                             <span className="text-[9px] font-bold text-primary/60">
