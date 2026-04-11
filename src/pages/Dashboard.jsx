@@ -8,8 +8,8 @@ import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, LogOut, Calendar, TrendingUp, TrendingDown, 
-  Search, ShieldCheck, Activity, PieChart as PieIcon, 
-  ArrowUpRight, ArrowDownRight, Filter, Info, PiggyBank,
+  Search, ShieldCheck, Activity, PieChart as PieIcon,
+  ArrowUpRight, ArrowDownRight, Info, PiggyBank,
   FileText, CreditCard, FolderOpen, Building2,
   AlertTriangle, Shield, Sparkles, Lightbulb, Zap
 } from 'lucide-react';
@@ -35,73 +35,16 @@ const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
 // === CENTRALIZED CLASSIFICATION SYSTEM ===
 const SAVINGS_CATEGORIES = ['Investimentos', 'Poupança', 'Aplicação', 'CDB', 'Tesouro', 'Fundo'];
 
-// Patterns that identify credit card bill payments (these are NOT real expenses —
-// the individual items inside the bill are the real expenses).
-// NOTE: Generic boleto patterns removed — they would also match utility bills (water, electricity, rent).
-// Only patterns that are unambiguously credit card bill payments are listed here.
-const BILL_PAYMENT_PATTERNS = [
-  'pagamento de fatura',
-  'pag fatura',
-  'pgto fatura',
-  'fatura paga',
-  'pagto cartao',
-  'pagamento cartao',
-  'pag cartão',
-  'pgto cartão',
-  'pag. fatura',
-  'pagto. fatura',
-  'pagamento fatura cartao',
-  'debito automatico fatura',
-  'boleto fatura',       // "boleto fatura" is specific enough — it's a bill boleto
-  'pagto. boleto cartao',
-  'efetuado (fatura)',   // Sicredi: "Pagamento efetuado (fatura)"
-];
-
-// Patterns for internal/personal transfers (not real income or expense)
-const INTERNAL_TRANSFER_PATTERNS = [
-  'soraya', 'conrado',
-];
-
-/**
- * Classifies a single transaction into one of:
- *   - 'savings'      → money sent to investments/savings
- *   - 'billPayment'  → credit card bill payment
- *   - 'neutral'      → internal transfers
- *   - 'income'       → real income
- *   - 'expense'      → real expense
- * 
- * @param {boolean} hasCardItems - If true, bill payments are treated as 'billPayment' (neutral).
- *                                 If false, they are treated as 'expense' (since they are the only record of the cost).
- */
-function classifyTransaction(item, hasCardItems = false) {
+function classifyTransaction(item) {
   const desc = (item.description || '').toLowerCase();
   const cat = (item.category || '');
 
-  // 1) Savings / Cofrinho
   const isSavings = SAVINGS_CATEGORIES.some(s =>
     cat.toLowerCase().includes(s.toLowerCase()) ||
     desc.includes(s.toLowerCase())
   );
   if (isSavings) return 'savings';
 
-  // 2) Bill payment detection
-  const isBillPaymentPattern =
-    cat === 'Pagamento de Fatura' ||
-    BILL_PAYMENT_PATTERNS.some(p => desc.includes(p));
-
-  if (isBillPaymentPattern) {
-    // INTELLIGENCE: Only count as neutral 'billPayment' if we have the detail (fatura)
-    // Otherwise, treat as an 'expense' because it's the only proof of spending.
-    return hasCardItems ? 'billPayment' : 'expense';
-  }
-
-  // 3) Internal transfers
-  const isInternal =
-    cat === 'Transferência Interna' ||
-    INTERNAL_TRANSFER_PATTERNS.some(p => desc.includes(p));
-  if (isInternal) return 'neutral';
-
-  // 4) Real income or expense
   return item.amount > 0 ? 'income' : 'expense';
 }
 
@@ -276,76 +219,40 @@ export default function Dashboard({ user }) {
     return Array.from(months).sort().reverse();
   }, [data]);
 
-  // === CONTEXT INTELLIGENCE ===
-  const hasCardItems = useMemo(() => {
-    return monthlyData.some(item => item.metadata?.import_type === 'fatura');
-  }, [monthlyData]);
-
-  // === AGGREGATES using centralized classifier ===
+  // === AGGREGATES ===
   const aggregates = useMemo(() => {
-    let income = 0, expense = 0, neutral = 0, savings = 0, billPayments = 0;
+    let income = 0, expense = 0, savings = 0;
     monthlyData.forEach(item => {
-      const cls = classifyTransaction(item, hasCardItems);
+      const cls = classifyTransaction(item);
       switch (cls) {
-        case 'savings':     savings += Math.abs(item.amount); break;
-        case 'billPayment': billPayments += Math.abs(item.amount); break;
-        case 'neutral':     neutral += Math.abs(item.amount); break;
-        case 'income':      income += item.amount; break;
-        case 'expense':     expense += Math.abs(item.amount); break;
+        case 'savings': savings += Math.abs(item.amount); break;
+        case 'income':  income += item.amount; break;
+        case 'expense': expense += Math.abs(item.amount); break;
       }
     });
-    return { income, expense, neutral, savings, billPayments, balance: income - expense };
-  }, [monthlyData, hasCardItems]);
-
-  // === DEDUPLICATION AUDIT ===
-  const auditAlerts = useMemo(() => {
-    const alerts = [];
-    const billItems = monthlyData.filter(i => {
-      // Logic: Is it a bill payment pattern?
-      const desc = (i.description || '').toLowerCase();
-      return (i.category === 'Pagamento de Fatura' || BILL_PAYMENT_PATTERNS.some(p => desc.includes(p)));
-    });
-
-    if (billItems.length > 0) {
-      const totalBill = billItems.reduce((s, i) => s + Math.abs(i.amount), 0);
-      if (hasCardItems) {
-        alerts.push({
-          type: 'info',
-          icon: Shield,
-          msg: `${billItems.length} pagamento(s) de fatura R$ ${totalBill.toLocaleString('pt-BR')} ignorados. Detalhamento de cartão detectado para evitar duplicidade.`,
-        });
-      } else {
-        alerts.push({
-          type: 'warning',
-          icon: AlertTriangle,
-          msg: `Pagamento total de R$ ${totalBill.toLocaleString('pt-BR')} incluído nas despesas, pois não encontramos o detalhamento desta fatura.`,
-        });
-      }
-    }
-    
-    return alerts;
-  }, [monthlyData, hasCardItems]);
+    return { income, expense, savings, balance: income - expense };
+  }, [monthlyData]);
 
   const topCategories = useMemo(() => {
     const cats = {};
     monthlyData.forEach(item => {
-      if (classifyTransaction(item, hasCardItems) === 'expense') {
+      if (classifyTransaction(item) === 'expense') {
         cats[item.category] = (cats[item.category] || 0) + Math.abs(item.amount);
       }
     });
     return Object.entries(cats).sort((a,b) => b[1] - a[1]).slice(0, 3);
-  }, [monthlyData, hasCardItems]);
+  }, [monthlyData]);
 
   const chartData = useMemo(() => {
     const agg = {};
     monthlyData.forEach(item => {
-      if (classifyTransaction(item, hasCardItems) === 'expense') {
+      if (classifyTransaction(item) === 'expense') {
         const cat = item.category || 'Outros';
         agg[cat] = (agg[cat] || 0) + Math.abs(item.amount);
       }
     });
     return Object.keys(agg).map(name => ({ name, value: agg[name] }));
-  }, [monthlyData, hasCardItems]);
+  }, [monthlyData]);
 
   const formatMonth = (m) => {
     if (!m) return '';
@@ -643,30 +550,12 @@ export default function Dashboard({ user }) {
               ))}
             </div>
             
-            {/* Audit Alerts */}
-            {auditAlerts.length > 0 && (
-              <div className="space-y-2 mb-4">
-                {auditAlerts.map((alert, i) => {
-                  const Icon = alert.icon;
-                  return (
-                    <div key={i} className={`flex items-start gap-3 p-3 rounded-2xl text-xs font-bold leading-snug border ${
-                      alert.type === 'warning'
-                        ? 'bg-yellow-400/10 border-yellow-400/20 text-yellow-400'
-                        : 'bg-nubank/10 border-nubank/20 text-nubank-light'
-                    }`}>
-                      <Icon size={16} className="shrink-0 mt-0.5" />
-                      <span>{alert.msg}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
 
             <div className="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar max-h-[400px]">
               <AnimatePresence>
                 {(() => {
                   const visibleItems = monthlyData.filter(item => {
-                    const cls = classifyTransaction(item, hasCardItems);
+                    const cls = classifyTransaction(item);
                     if (typeFilter === 'receitas') return cls === 'income';
                     if (typeFilter === 'despesas') return cls === 'expense';
                     return true;
@@ -677,27 +566,13 @@ export default function Dashboard({ user }) {
                   );
 
                   return visibleItems.map((item, i) => {
-                    const cls = classifyTransaction(item, hasCardItems);
+                    const cls = classifyTransaction(item);
                     const isPos = item.amount > 0;
-                    const excluded = cls === 'savings' || cls === 'billPayment' || cls === 'neutral';
-                    
-                    // Logic to see if the item IS a bill payment, even if classified as expense
-                    const isBillPattern = 
-                        item.category === 'Pagamento de Fatura' || 
-                        BILL_PAYMENT_PATTERNS.some(p => (item.description || '').toLowerCase().includes(p));
 
-                    // Visual config per classification
                     const styles = {
-                      savings:     { bg: 'bg-cyan-500/20 text-cyan-400', icon: <PiggyBank size={18} />, label: 'Cofrinho', color: 'text-cyan-400' },
-                      billPayment: { bg: 'bg-nubank/20 text-nubank-light', icon: <CreditCard size={18} />, label: 'Fatura (Isento)', color: 'text-nubank-light' },
-                      neutral:     { bg: 'bg-surface-container-low text-on-surface-variant', icon: <Filter size={18} />, label: 'Isento', color: 'text-on-surface-variant' },
-                      income:      { bg: 'bg-success/20 text-success', icon: <ArrowUpRight size={18} />, label: item.category, color: 'text-success' },
-                      expense:     { 
-                        bg: isBillPattern ? 'bg-yellow-400/20 text-yellow-400' : 'bg-primary/20 text-primary', 
-                        icon: isBillPattern ? <CreditCard size={18} /> : <TrendingDown size={18} />, 
-                        label: isBillPattern ? 'Fatura Agregada' : item.category, 
-                        color: 'text-error' 
-                      },
+                      savings: { bg: 'bg-cyan-500/20 text-cyan-400', icon: <PiggyBank size={18} />, label: 'Cofrinho', color: 'text-cyan-400' },
+                      income:  { bg: 'bg-success/20 text-success', icon: <ArrowUpRight size={18} />, label: item.category, color: 'text-success' },
+                      expense: { bg: 'bg-primary/20 text-primary', icon: <TrendingDown size={18} />, label: item.category, color: 'text-error' },
                     }[cls];
 
                     return (
@@ -707,7 +582,7 @@ export default function Dashboard({ user }) {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         layout
-                        className={`group flex items-start gap-4 p-4 rounded-3xl transition-all border border-transparent hover:border-white/10 ${excluded ? 'bg-white/2 opacity-60' : 'bg-white/5 hover:bg-white/[0.08]'}`}
+                        className="group flex items-start gap-4 p-4 rounded-3xl transition-all border border-transparent hover:border-white/10 bg-white/5 hover:bg-white/[0.08]"
                       >
                         <div className={`w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 ${styles.bg}`}>
                           {styles.icon}
