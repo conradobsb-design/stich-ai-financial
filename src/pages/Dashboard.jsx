@@ -130,11 +130,20 @@ export default function Dashboard({ user }) {
       if (error) throw error;
       const link = `${window.location.origin}/invite?token=${inv.token}`;
       setInviteLink(link);
-      const subject = encodeURIComponent('Convite para o Extrato Co.');
-      const body = encodeURIComponent(
-        `Olá!\n\nVocê foi convidado para compartilhar uma conta no Extrato Co.\n\nClique no link abaixo para aceitar:\n${link}\n\nO convite expira em 7 dias.`
-      );
-      window.open(`mailto:${inviteEmail}?subject=${subject}&body=${body}`, '_blank');
+
+      const emailWebhookUrl = import.meta.env.VITE_N8N_EMAIL_WEBHOOK_URL;
+      if (emailWebhookUrl) {
+        await fetch(emailWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: inviteEmail,
+            subject: 'Convite para o Extrato Co.',
+            body: `Olá!\n\nVocê foi convidado para compartilhar uma conta no Extrato Co.\n\nClique no link abaixo para aceitar:\n${link}\n\nO convite expira em 7 dias.`,
+          }),
+        });
+      }
+
       setInviteEmail('');
       await fetchMembers();
     } catch (err) {
