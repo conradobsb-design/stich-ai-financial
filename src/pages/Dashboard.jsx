@@ -87,6 +87,7 @@ export default function Dashboard({ user }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
+  const [effectiveUserId, setEffectiveUserId] = useState(null);
   const navigate = useNavigate();
 
   const [selectedMonth, setSelectedMonth] = useState('');
@@ -96,10 +97,21 @@ export default function Dashboard({ user }) {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
+        // Resolve effective user id — check if this user is linked to another account
+        let resolvedUserId = user.id;
+        const { data: link } = await supabase
+          .schema('stich_ai')
+          .from('account_links')
+          .select('linked_to_user_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (link?.linked_to_user_id) resolvedUserId = link.linked_to_user_id;
+        setEffectiveUserId(resolvedUserId);
+
         const { data: history, error } = await supabase
           .from('transactions')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', resolvedUserId)
           .order('transaction_date', { ascending: false });
 
         if (error) throw error;
@@ -165,7 +177,7 @@ export default function Dashboard({ user }) {
       // multipart/form-data não é parseado automaticamente pelo n8n (body ficaria {}).
       const payload = {
         text_data: extractedText,
-        user_id: user.id,
+        user_id: effectiveUserId || user.id,
         file_name: file.name,
         import_type: importType || 'extrato',
       };
