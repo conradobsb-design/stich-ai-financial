@@ -121,6 +121,15 @@ export default function Dashboard({ user }) {
     setInviteLoading(true);
     setInviteLink('');
     try {
+      // Remove convites pendentes anteriores para o mesmo email
+      await supabase
+        .schema('stich_ai')
+        .from('account_invites')
+        .delete()
+        .eq('inviter_user_id', effectiveUserId)
+        .eq('invitee_email', inviteEmail)
+        .is('accepted_at', null);
+
       const { data: inv, error } = await supabase
         .schema('stich_ai')
         .from('account_invites')
