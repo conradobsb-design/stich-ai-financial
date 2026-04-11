@@ -22,6 +22,7 @@ export default function InvitePage({ user }) {
 
     const checkInvite = async () => {
       const { data, error } = await supabase
+        .schema('stich_ai')
         .from('account_invites')
         .select('*')
         .eq('token', token)
@@ -37,6 +38,7 @@ export default function InvitePage({ user }) {
 
       // Check if user already has a link
       const { data: existingLink } = await supabase
+        .schema('stich_ai')
         .from('account_links')
         .select('linked_to_user_id')
         .eq('user_id', user.id)
@@ -58,12 +60,14 @@ export default function InvitePage({ user }) {
     setStatus('accepting');
     try {
       const { error: linkError } = await supabase
+        .schema('stich_ai')
         .from('account_links')
         .insert({ user_id: user.id, linked_to_user_id: invite.inviter_user_id });
 
       if (linkError) throw linkError;
 
       await supabase
+        .schema('stich_ai')
         .from('account_invites')
         .update({ accepted_at: new Date().toISOString() })
         .eq('token', token);

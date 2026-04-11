@@ -107,6 +107,7 @@ export default function Dashboard({ user }) {
   const fetchMembers = async () => {
     if (!effectiveUserId) return;
     const { data: rows } = await supabase
+      .schema('stich_ai')
       .from('account_invites')
       .select('invitee_email, accepted_at, created_at, expires_at')
       .eq('inviter_user_id', effectiveUserId)
@@ -121,6 +122,7 @@ export default function Dashboard({ user }) {
     setInviteLink('');
     try {
       const { data: inv, error } = await supabase
+        .schema('stich_ai')
         .from('account_invites')
         .insert({ inviter_user_id: effectiveUserId, invitee_email: inviteEmail })
         .select('token')
