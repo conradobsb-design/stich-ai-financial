@@ -10,7 +10,7 @@ import {
   Plus, LogOut, Calendar, TrendingUp, TrendingDown, 
   Search, ShieldCheck, Activity, PieChart as PieIcon, 
   ArrowUpRight, ArrowDownRight, Filter, Info, PiggyBank,
-  FileText, CreditCard, X, UploadCloud, FolderOpen, Building2,
+  FileText, CreditCard, FolderOpen, Building2,
   AlertTriangle, Shield, Sparkles, Lightbulb, Zap
 } from 'lucide-react';
 
@@ -149,8 +149,6 @@ export default function Dashboard({ user }) {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('todos');
-  const [importModal, setImportModal] = useState(false); // show import type picker
-  const [pendingImportType, setPendingImportType] = useState(null); // 'extrato' | 'fatura'
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -180,8 +178,6 @@ export default function Dashboard({ user }) {
     if (!file) return;
     e.target.value = '';
     setLoading(true);
-    setImportModal(false);
-    setPendingImportType(null);
 
     try {
       const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name);
@@ -810,79 +806,14 @@ export default function Dashboard({ user }) {
 
       </main>
 
-      {/* Import Type Modal */}
-      <AnimatePresence>
-        {importModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4"
-            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
-            onClick={() => setImportModal(false)}
-          >
-            <motion.div
-              initial={{ y: 60, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 60, opacity: 0 }}
-              transition={{ type: 'spring', bounce: 0.2 }}
-              className="glass-card rounded-[2rem] p-8 w-full max-w-sm relative"
-              onClick={e => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setImportModal(false)}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 text-on-surface-variant transition-all"
-              >
-                <X size={18} />
-              </button>
-
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-2xl bg-primary/20 flex items-center justify-center">
-                  <UploadCloud size={20} className="text-primary" />
-                </div>
-                <div>
-                  <h4 className="font-black text-white text-lg leading-none">Importar Arquivo</h4>
-                  <p className="text-xs text-on-surface-variant mt-0.5">Selecione o tipo de documento</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <label
-                  htmlFor="fileInputExtrato"
-                  className="cursor-pointer group flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-white/10 hover:border-primary/60 bg-white/5 hover:bg-primary/10 transition-all"
-                >
-                  <FileText size={28} className="text-primary group-hover:scale-110 transition-transform" />
-                  <span className="font-black text-sm text-white text-center leading-tight">Extrato Bancário</span>
-                  <span className="text-[9px] text-on-surface-variant uppercase tracking-wider">CSV / PDF / OFX</span>
-                  <input
-                    id="fileInputExtrato"
-                    type="file"
-                    accept=".csv,.pdf,.ofx"
-                    className="hidden"
-                    onChange={e => handleFileUpload(e, 'extrato')}
-                  />
-                </label>
-
-                <label
-                  htmlFor="fileInputFatura"
-                  className="cursor-pointer group flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-white/10 hover:border-yellow-400/60 bg-white/5 hover:bg-yellow-400/10 transition-all"
-                >
-                  <CreditCard size={28} className="text-yellow-400 group-hover:scale-110 transition-transform" />
-                  <span className="font-black text-sm text-white text-center leading-tight">Fatura de Cartão</span>
-                  <span className="text-[9px] text-on-surface-variant uppercase tracking-wider">CSV / PDF / OFX</span>
-                  <input
-                    id="fileInputFatura"
-                    type="file"
-                    accept=".csv,.pdf,.ofx"
-                    className="hidden"
-                    onChange={e => handleFileUpload(e, 'fatura')}
-                  />
-                </label>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Hidden file input for direct import */}
+      <input
+        id="fileInputExtrato"
+        type="file"
+        accept=".csv,.pdf,.ofx,.jpg,.jpeg,.png"
+        className="hidden"
+        onChange={e => handleFileUpload(e, 'extrato')}
+      />
 
       {/* QuickActionsBar (Fixed Bottom Glass) */}
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60]">
@@ -891,15 +822,14 @@ export default function Dashboard({ user }) {
           animate={{ y: 0 }}
           className="glass p-2 rounded-full border border-white/10 shadow-3xl flex items-center gap-2"
         >
-          <button 
-            onClick={() => setImportModal(true)}
-            disabled={loading}
-            className="flex items-center gap-2 bg-primary hover:bg-secondary text-white px-6 py-3 rounded-full font-bold text-sm transition-all active:scale-95 shadow-lg shadow-primary/30 disabled:opacity-60"
+          <label
+            htmlFor={loading ? undefined : "fileInputExtrato"}
+            className={`flex items-center gap-2 bg-primary hover:bg-secondary text-white px-6 py-3 rounded-full font-bold text-sm transition-all active:scale-95 shadow-lg shadow-primary/30 cursor-pointer ${loading ? 'opacity-60 pointer-events-none' : ''}`}
           >
             {loading
               ? <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processando...</>
               : <><Plus size={18} /> Importar Arquivo</>}
-          </button>
+          </label>
           
           <div className="h-8 w-[1px] bg-white/10 mx-1"></div>
           
