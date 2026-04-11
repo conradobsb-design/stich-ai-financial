@@ -32,7 +32,9 @@ export default function Login() {
           password,
         });
         if (error) throw error;
-        navigate('/dashboard');
+        const params = new URLSearchParams(window.location.search);
+        const redirect = params.get('redirect') || '/dashboard';
+        navigate(redirect);
       }
     } catch (error) {
       setMessage({ text: error.message, type: 'error' });

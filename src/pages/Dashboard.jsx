@@ -7,11 +7,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Plus, LogOut, Calendar, TrendingUp, TrendingDown, 
+  Plus, LogOut, Calendar, TrendingUp, TrendingDown,
   Search, ShieldCheck, Activity, PieChart as PieIcon,
   ArrowUpRight, ArrowDownRight, Info, PiggyBank,
   FileText, CreditCard, FolderOpen, Building2,
-  AlertTriangle, Shield, Sparkles, Lightbulb, Zap
+  AlertTriangle, Shield, Sparkles, Lightbulb, Zap,
+  Users, UserPlus, Copy, Check, X, Mail, Link
 } from 'lucide-react';
 
 import * as pdfjsLib from 'pdfjs-dist';
@@ -93,6 +94,59 @@ export default function Dashboard({ user }) {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('todos');
+
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [members, setMembers] = useState([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLink, setInviteLink] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const isOwner = effectiveUserId === user?.id;
+
+  const fetchMembers = async () => {
+    if (!effectiveUserId) return;
+    const { data: rows } = await supabase
+      .from('account_invites')
+      .select('invitee_email, accepted_at, created_at, expires_at')
+      .eq('inviter_user_id', effectiveUserId)
+      .order('created_at', { ascending: false });
+    setMembers(rows || []);
+  };
+
+  const handleInvite = async (e) => {
+    e.preventDefault();
+    if (!inviteEmail) return;
+    setInviteLoading(true);
+    setInviteLink('');
+    try {
+      const { data: inv, error } = await supabase
+        .from('account_invites')
+        .insert({ inviter_user_id: effectiveUserId, invitee_email: inviteEmail })
+        .select('token')
+        .single();
+      if (error) throw error;
+      const link = `${window.location.origin}/invite?token=${inv.token}`;
+      setInviteLink(link);
+      const subject = encodeURIComponent('Convite para o Extrato Co.');
+      const body = encodeURIComponent(
+        `Olá!\n\nVocê foi convidado para compartilhar uma conta no Extrato Co.\n\nClique no link abaixo para aceitar:\n${link}\n\nO convite expira em 7 dias.`
+      );
+      window.open(`mailto:${inviteEmail}?subject=${subject}&body=${body}`, '_blank');
+      setInviteEmail('');
+      await fetchMembers();
+    } catch (err) {
+      alert('Erro ao criar convite: ' + err.message);
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -299,6 +353,13 @@ export default function Dashboard({ user }) {
             <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Usuário Premium</span>
             <span className="text-xs font-medium text-white/80">{user?.email}</span>
           </div>
+          <button
+            onClick={() => { setShowMembersModal(true); fetchMembers(); }}
+            className="p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white"
+            title="Membros da conta"
+          >
+            <Users size={20} />
+          </button>
           <button onClick={handleLogout} className="p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white">
             <LogOut size={20} />
           </button>
@@ -692,6 +753,134 @@ export default function Dashboard({ user }) {
         })()}
 
       </main>
+
+      {/* Members Modal */}
+      <AnimatePresence>
+        {showMembersModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+            onClick={() => { setShowMembersModal(false); setInviteLink(''); }}
+          >
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ type: 'spring', bounce: 0.2 }}
+              className="glass-card rounded-[2rem] p-8 w-full max-w-md relative"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                onClick={() => { setShowMembersModal(false); setInviteLink(''); }}
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 text-on-surface-variant transition-all"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-2xl bg-primary/20 flex items-center justify-center">
+                  <Users size={20} className="text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-black text-white text-lg leading-none">Membros da Conta</h4>
+                  <p className="text-xs text-on-surface-variant mt-0.5">
+                    {isOwner ? 'Gerencie quem acessa sua conta' : 'Você está em uma conta compartilhada'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Invite form — owner only */}
+              {isOwner && (
+                <form onSubmit={handleInvite} className="mb-6">
+                  <label className="text-xs font-black text-on-surface-variant uppercase tracking-widest mb-2 block">
+                    Convidar por e-mail
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+                      <input
+                        type="email"
+                        placeholder="email@exemplo.com"
+                        value={inviteEmail}
+                        onChange={e => setInviteEmail(e.target.value)}
+                        required
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-9 pr-3 text-sm text-white outline-none focus:border-primary/50 transition-all placeholder:text-white/30"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={inviteLoading}
+                      className="px-4 py-2.5 rounded-xl bg-primary hover:bg-secondary text-white text-sm font-bold transition-all disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {inviteLoading
+                        ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        : <><UserPlus size={14} /> Convidar</>}
+                    </button>
+                  </div>
+
+                  {/* Generated link */}
+                  {inviteLink && (
+                    <div className="mt-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider mb-1.5">
+                        Link de convite gerado
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-white/70 flex-1 truncate font-mono">{inviteLink}</p>
+                        <button
+                          type="button"
+                          onClick={handleCopyLink}
+                          className="shrink-0 p-1.5 rounded-lg hover:bg-white/10 text-on-surface-variant hover:text-white transition-all"
+                        >
+                          {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-on-surface-variant/60 mt-1.5">
+                        O e-mail foi aberto automaticamente. Se não abriu, copie o link acima.
+                      </p>
+                    </div>
+                  )}
+                </form>
+              )}
+
+              {/* Members list */}
+              <div>
+                <p className="text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3">
+                  {isOwner ? 'Convites' : 'Conta'}
+                </p>
+                {!isOwner && (
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-sm text-white/70">
+                    Você está acessando uma conta compartilhada.
+                  </div>
+                )}
+                {isOwner && members.length === 0 && (
+                  <p className="text-sm text-on-surface-variant italic">Nenhum convite enviado ainda.</p>
+                )}
+                {isOwner && members.map((m, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 mb-2">
+                    <Link size={14} className={m.accepted_at ? 'text-success' : 'text-on-surface-variant'} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-white truncate">{m.invitee_email}</p>
+                      <p className="text-[10px] text-on-surface-variant">
+                        {m.accepted_at
+                          ? `Aceito em ${new Date(m.accepted_at).toLocaleDateString('pt-BR')}`
+                          : `Pendente — expira ${new Date(m.expires_at).toLocaleDateString('pt-BR')}`}
+                      </p>
+                    </div>
+                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                      m.accepted_at ? 'bg-success/20 text-success' : 'bg-yellow-400/20 text-yellow-400'
+                    }`}>
+                      {m.accepted_at ? 'Ativo' : 'Pendente'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Hidden file input for direct import */}
       <input
