@@ -47,7 +47,8 @@ function classifyTransaction(item) {
     cat.toLowerCase().includes(s.toLowerCase()) ||
     desc.includes(s.toLowerCase())
   );
-  if (isSavings) return 'savings';
+  // Resgates (amount > 0) são entrada real de caixa — só saídas para investimento ficam em savings
+  if (isSavings && item.amount < 0) return 'savings';
 
   return item.amount > 0 ? 'income' : 'expense';
 }
