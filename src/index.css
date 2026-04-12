@@ -95,3 +95,88 @@ body {
 .import-card-hover:hover {
   animation: pulse-glow 2s ease-in-out infinite;
 }
+
+/* ═══════════════════════════════════════
+   LIGHT MODE OVERRIDES
+   ═══════════════════════════════════════ */
+html.light body {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Backgrounds */
+html.light .mesh-bg {
+  background-color: #f1f5f9 !important;
+  background-image:
+    radial-gradient(at 0% 0%,   rgba(14, 165, 233, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.05) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(99, 102, 241, 0.04) 0px, transparent 50%) !important;
+}
+
+html.light .bg-background {  background-color: #f1f5f9 !important; }
+html.light .bg-surface      { background-color: #ffffff !important; }
+
+/* Cards */
+html.light .glass-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%) !important;
+  border: 1px solid rgba(14, 165, 233, 0.15) !important;
+  box-shadow: 0 4px 24px -4px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04) !important;
+}
+html.light .glass-card:hover {
+  border-color: rgba(14, 165, 233, 0.3) !important;
+  box-shadow: 0 8px 32px -8px rgba(14, 165, 233, 0.15) !important;
+}
+
+html.light .glass {
+  background: rgba(255,255,255,0.85) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(0,0,0,0.07) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+}
+
+/* Surface containers */
+html.light .bg-surface-container-low { background-color: #e2e8f0 !important; }
+html.light .bg-surface-container     { background-color: #cbd5e1 !important; }
+html.light .bg-surface-container-high{ background-color: #b6c3d4 !important; }
+
+/* Text */
+html.light .text-white             { color: #0f172a !important; }
+html.light .text-on-surface        { color: #0f172a !important; }
+html.light .text-on-surface-variant{ color: #475569 !important; }
+html.light .text-white\/80         { color: rgba(15,23,42,0.80) !important; }
+html.light .text-white\/60         { color: rgba(15,23,42,0.60) !important; }
+html.light .text-white\/50         { color: rgba(15,23,42,0.50) !important; }
+html.light .text-white\/40         { color: rgba(15,23,42,0.40) !important; }
+html.light .text-white\/30         { color: rgba(15,23,42,0.30) !important; }
+html.light .text-white\/20         { color: rgba(15,23,42,0.20) !important; }
+
+/* Borders */
+html.light .border-outline-variant   { border-color: rgba(0,0,0,0.09) !important; }
+html.light .border-white\/5          { border-color: rgba(0,0,0,0.06) !important; }
+html.light .border-white\/10         { border-color: rgba(0,0,0,0.10) !important; }
+
+/* Select / inputs */
+html.light select.bg-transparent    { color: #0f172a !important; }
+html.light select option            { background: #f1f5f9; color: #0f172a; }
+
+/* Charts tooltips */
+html.light .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: #ffffff !important;
+  border: 1px solid rgba(14, 165, 233, 0.2) !important;
+  color: #0f172a !important;
+}
+
+/* Glows — sutis no modo claro */
+html.light .text-glow {
+  text-shadow: 0 0 20px rgba(14, 165, 233, 0.25);
+}
+
+/* Scrollbar */
+html.light ::-webkit-scrollbar-track { background: #e2e8f0; }
+html.light ::-webkit-scrollbar-thumb { background: #94a3b8; }
+
+/* Transition suave ao trocar tema */
+*, *::before, *::after {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.15s ease, box-shadow 0.25s ease;
+}

@@ -6,14 +6,16 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
   Plus, LogOut, Calendar, TrendingUp, TrendingDown,
   Search, ShieldCheck, Activity, PieChart as PieIcon,
   ArrowUpRight, ArrowDownRight, Info, PiggyBank,
   FileText, CreditCard, FolderOpen, Building2,
   AlertTriangle, Shield, Sparkles, Lightbulb, Zap,
-  Users, UserPlus, Copy, Check, X, Mail, Link
+  Users, UserPlus, Copy, Check, X, Mail, Link,
+  Eye, EyeOff, Sun, Moon
 } from 'lucide-react';
+import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -85,6 +87,8 @@ const HealthIndicator = ({ income, expense }) => {
 };
 
 export default function Dashboard({ user }) {
+  const { theme, toggleTheme, hideValues, toggleHideValues } = useApp();
+
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
@@ -380,6 +384,24 @@ export default function Dashboard({ user }) {
           >
             <Users size={20} />
           </button>
+          {/* Ocultar valores */}
+          <button
+            onClick={toggleHideValues}
+            className="p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white"
+            title={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
+          >
+            {hideValues ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+
+          {/* Tema claro / escuro */}
+          <button
+            onClick={toggleTheme}
+            className="p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white"
+            title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+
           <button onClick={handleLogout} className="p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white">
             <LogOut size={20} />
           </button>
@@ -429,7 +451,7 @@ export default function Dashboard({ user }) {
                   <Activity size={12} /> Saldo Líquido do Mês
                 </div>
                 <div className="text-[4rem] md:text-[5rem] leading-none font-black text-white tracking-tighter text-glow">
-                  R$ {aggregates.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {maskBRL(aggregates.balance, hideValues)}
                 </div>
               </div>
 
@@ -438,19 +460,19 @@ export default function Dashboard({ user }) {
                   <div className="flex items-center gap-2 text-success font-bold text-[10px] uppercase mb-1">
                     <ArrowUpRight size={12} /> Entradas
                   </div>
-                  <p className="text-xl font-black text-white">R$ {aggregates.income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <p className="text-xl font-black text-white">{maskBRL(aggregates.income, hideValues)}</p>
                 </div>
                 <div className="flex-1 min-w-[120px] glass p-5 rounded-3xl border-l-4" style={{ borderLeftColor: '#ef4444' }}>
                   <div className="flex items-center gap-2 text-error font-bold text-[10px] uppercase mb-1">
                     <ArrowDownRight size={12} /> Saídas
                   </div>
-                  <p className="text-xl font-black text-white">R$ {aggregates.expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <p className="text-xl font-black text-white">{maskBRL(aggregates.expense, hideValues)}</p>
                 </div>
                 <div className="flex-1 min-w-[120px] glass p-5 rounded-3xl border-l-4" style={{ borderLeftColor: '#00d2ff' }}>
                   <div className="flex items-center gap-2 font-bold text-[10px] uppercase mb-1" style={{ color: '#00d2ff' }}>
                     <PiggyBank size={12} /> Cofrinho
                   </div>
-                  <p className="text-xl font-black text-white">R$ {aggregates.savings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <p className="text-xl font-black text-white">{maskBRL(aggregates.savings, hideValues)}</p>
                   <p className="text-[9px] font-bold mt-1" style={{ color: '#00d2ff99' }}>Invest. &amp; Poupança</p>
                 </div>
               </div>
@@ -689,7 +711,7 @@ export default function Dashboard({ user }) {
                         </div>
                         <div className="text-right shrink-0">
                           <p className={`font-black text-sm whitespace-nowrap ${styles.color}`}>
-                            {isPos ? '+' : ''} R$ {Math.abs(item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            {hideValues ? 'R$ •••••' : `${isPos ? '+' : ''} R$ ${Math.abs(item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                           </p>
                           <p className="text-[10px] font-semibold text-white/50 mt-0.5">
             {item.transaction_date
@@ -847,7 +869,7 @@ export default function Dashboard({ user }) {
                         </button>
                       </div>
                       <p className="text-[10px] text-on-surface-variant/60 mt-1.5">
-                        O e-mail foi aberto automaticamente. Se não abriu, copie o link acima.
+                        O e-mail foi enviado automaticamente. Se não chegou, copie o link acima.
                       </p>
                     </div>
                   )}
