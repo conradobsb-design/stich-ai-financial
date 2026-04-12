@@ -14,7 +14,7 @@ import {
   AlertTriangle, Shield, Sparkles, Lightbulb, Zap,
   Users, UserPlus, Copy, Check, X, Mail, Link,
   Eye, EyeOff, Sun, Moon,
-  MessageSquare, Send, Bot, ChevronDown
+  MessageSquare, Send, Bot, ChevronDown, Landmark
 } from 'lucide-react';
 import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 import { useSEO } from '../hooks/useSEO';
@@ -40,20 +40,23 @@ const CHAT_URL = import.meta.env.VITE_N8N_CHAT_URL;
 
 // === SMART AUTO-CATEGORIZATION ===
 const CATEGORY_RULES = [
-  { cat: 'Investimentos',        keywords: ['cdb', 'tesouro', 'fundo', 'aplicação', 'aplicacao', 'poupança', 'poupanca', 'resgate', 'rendimento', 'remuner'] },
-  { cat: 'Moradia',              keywords: ['condomin', 'aluguel', 'iptu', 'água', 'agua', 'gás', 'gas', 'enel', 'cemig', 'copel', 'sabesp', 'sanepar', 'luz', 'energia', 'mediterran'] },
-  { cat: 'Telecomunicações',     keywords: ['telefonica', 'vivo', 'claro', 'tim', 'oi ', 'net ', 'internet', 'nextel', 'telecom'] },
-  { cat: 'Cartão de Crédito',    keywords: ['fatura cartao', 'fatura cartão', 'pagamento cartao', 'pagamento cartão', 'lancamento cartao', 'lançamento cartão', 'bce'] },
-  { cat: 'Impostos & Encargos',  keywords: ['e-social', 'esocial', 'daed', 'darf', 'iof', 'imposto', 'inss', 'fgts', 'pgfn', 'simples', 'nf-e', 'nota fiscal'] },
-  { cat: 'Saúde',                keywords: ['farmacia', 'farmácia', 'drogaria', 'hospital', 'clinica', 'clínica', 'médico', 'medico', 'plano saude', 'plano saúde', 'unimed', 'amil', 'bradesco saude'] },
-  { cat: 'Educação',             keywords: ['escola', 'faculdade', 'universidade', 'mensalidade', 'colégio', 'colegio', 'educac', 'gimenes', 'gomes'] },
-  { cat: 'Viagem & Hospedagem',  keywords: ['hotel', 'hilton', 'marriott', 'airbnb', 'booking', 'passagem', 'aeroporto', 'companhia aerea', 'latam', 'gol ', 'azul '] },
-  { cat: 'Alimentação',          keywords: ['ifood', 'rappi', 'uber eats', 'restaurante', 'padaria', 'mercado', 'supermercado', 'lanchonete', 'delivery'] },
-  { cat: 'Transporte',           keywords: ['uber ', 'cabify', '99 ', 'taxi', 'estacion', 'combustivel', 'combustível', 'posto ', 'pedágio', 'pedagio', 'detran', 'ipva'] },
-  { cat: 'Seguros',              keywords: ['seguro', 'sulamerica', 'porto seguro', 'bradesco seguro', 'allianz'] },
-  { cat: 'Serviços Financeiros', keywords: ['itau unibanco', 'itaú unibanco', 'boleto', 'ted enviada', 'doc enviado', 'sicredi', 'sicoob', 'bradesco', 'santander', 'nu pagamentos', 'btg pactual'] },
-  { cat: 'Transferência',        keywords: ['pix enviado', 'pix recebido', 'transferencia', 'transferência', 'ted', 'doc '] },
-  { cat: 'Assinaturas & SaaS',   keywords: ['netflix', 'spotify', 'amazon', 'google', 'microsoft', 'adobe', 'apple', 'select plus', 'pacote', 'assinatura', 'mensalidade'] },
+  { cat: 'Investimentos',        keywords: ['cdb', 'tesouro', 'fundo', 'aplicação', 'aplicacao', 'poupança', 'poupanca', 'resgate', 'rendimento', 'remuner', 'renda fixa', 'lci', 'lca', 'debenture', 'debênture', 'ações', 'acoes', 'btc', 'cripto', 'xp invest', 'rico invest', 'clear invest', 'modal invest', 'inter invest', 'nuinvest'] },
+  { cat: 'Moradia',              keywords: ['condomin', 'aluguel', 'iptu', 'água', 'agua', 'gás', 'gas', 'enel', 'cemig', 'copel', 'sabesp', 'sanepar', 'luz ', 'energia', 'mediterran', 'administradora', 'taxa condominial', 'neoenergia', 'equatorial', 'celpe', 'coelba', 'cosern'] },
+  { cat: 'Telecomunicações',     keywords: ['telefonica', 'vivo', 'claro', 'tim', 'oi ', 'net ', 'internet', 'nextel', 'telecom', 'sky ', 'starlink', 'banda larga', 'fibra', 'plano cel', 'recarga'] },
+  { cat: 'Cartão de Crédito',    keywords: ['fatura cartao', 'fatura cartão', 'pagamento cartao', 'pagamento cartão', 'lancamento cartao', 'lançamento cartão', 'bce', 'pgto cartao', 'pgto fatura', 'debito fatura'] },
+  { cat: 'Impostos & Encargos',  keywords: ['e-social', 'esocial', 'daed', 'darf', 'iof', 'imposto', 'inss', 'fgts', 'pgfn', 'simples', 'nf-e', 'nota fiscal', 'irrf', 'irpf', 'cofins', 'pis/', 'csll', 'iss ', 'icms', 'taxa federal', 'receita federal', 'prefeitura', 'municipio', 'multa '] },
+  { cat: 'Saúde',                keywords: ['farmacia', 'farmácia', 'drogaria', 'hospital', 'clinica', 'clínica', 'médico', 'medico', 'plano saude', 'plano saúde', 'unimed', 'amil', 'bradesco saude', 'hapvida', 'notredame', 'sulamerica saude', 'odonto', 'dentista', 'laboratorio', 'laboratório', 'exame', 'consulta', 'psicolog', 'terapia', 'fisioter'] },
+  { cat: 'Educação',             keywords: ['escola', 'faculdade', 'universidade', 'mensalidade', 'colégio', 'colegio', 'educac', 'gimenes', 'gomes', 'curso', 'treinamento', 'capacitacao', 'capacitação', 'alura', 'udemy', 'coursera', 'duolingo', 'material escolar', 'livro', 'livraria'] },
+  { cat: 'Viagem & Hospedagem',  keywords: ['hotel', 'hilton', 'marriott', 'airbnb', 'booking', 'passagem', 'aeroporto', 'companhia aerea', 'latam', 'gol ', 'azul ', 'decolar', 'hurb', 'hostel', 'resort', 'pousada', 'trivago', 'hotels.com'] },
+  { cat: 'Alimentação',          keywords: ['ifood', 'rappi', 'uber eats', 'restaurante', 'padaria', 'mercado', 'supermercado', 'lanchonete', 'delivery', 'açougue', 'acougue', 'hortifruti', 'pão de açúcar', 'carrefour', 'extra ', 'walmart', 'atacadão', 'atacadao', 'sams club', 'costco', 'pizza', 'hamburguer', 'burguer', 'sushi', 'churrascaria', 'cafe ', 'café '] },
+  { cat: 'Transporte',           keywords: ['uber ', 'cabify', '99 ', 'taxi', 'estacion', 'combustivel', 'combustível', 'posto ', 'pedágio', 'pedagio', 'detran', 'ipva', 'metrô', 'metro ', 'ônibus', 'onibus', 'bilhete unico', 'bilhete único', 'bom bilhete', 'dpvat', 'licenciamento', 'denatran', 'recarga transporte'] },
+  { cat: 'Lazer & Entretenimento', keywords: ['cinema', 'teatro', 'show', 'ingresso', 'ticketmaster', 'sympla', 'eventbrite', 'parque', 'museu', 'clube ', 'academia', 'gym', 'smartfit', 'bluefit', 'bodytech', 'jogo', 'steam', 'playstation', 'xbox', 'nintendo'] },
+  { cat: 'Seguros',              keywords: ['seguro', 'sulamerica', 'porto seguro', 'bradesco seguro', 'allianz', 'tokio marine', 'mapfre', 'sompo', 'zurich', 'axa ', 'caixa seguro', 'bb seguro', 'seguro vida', 'seguro auto', 'seguro resid'] },
+  { cat: 'Serviços Financeiros', keywords: ['itau unibanco', 'itaú unibanco', 'boleto', 'ted enviada', 'doc enviado', 'sicredi', 'sicoob', 'bradesco', 'santander', 'nu pagamentos', 'btg pactual', 'banco inter', 'caixa economica', 'banco do brasil', 'tarifa', 'taxa bancaria', 'iof ', 'spread', 'juros ', 'emprestimo', 'empréstimo', 'financiamento', 'parcela '] },
+  { cat: 'Transferência',        keywords: ['pix enviado', 'pix recebido', 'transferencia', 'transferência', 'ted ', 'doc ', 'entre contas', 'portabilidade'] },
+  { cat: 'Salário & Receitas',   keywords: ['salario', 'salário', 'vencimento', 'remuneracao', 'remuneração', 'prolabore', 'pro-labore', 'honorarios', 'honorários', 'comissao', 'comissão', 'pagamento recebido', 'recebimento', '13o', '13°', 'ferias', 'férias', 'rescisao', 'rescisão'] },
+  { cat: 'Assinaturas & SaaS',   keywords: ['netflix', 'spotify', 'amazon prime', 'google one', 'microsoft', 'adobe', 'apple ', 'select plus', 'assinatura', 'hbo', 'disney', 'paramount', 'globoplay', 'deezer', 'youtube premium', 'dropbox', 'icloud'] },
+  { cat: 'Casa & Utilidades',    keywords: ['casas bahia', 'magazine luiza', 'americanas', 'shoptime', 'leroy merlin', 'tramontina', 'tok&stok', 'mobly', 'loja de moveis', 'eletrodomestico', 'eletrodoméstico', 'reforma', 'decoracao', 'decoração', 'materiais construcao'] },
 ];
 
 function smartCategory(item) {
@@ -604,11 +607,13 @@ export default function Dashboard({ user }) {
 
       // Monta payload JSON — n8n lê $json.body corretamente com application/json.
       // multipart/form-data não é parseado automaticamente pelo n8n (body ficaria {}).
+      const sourceType = importType === 'cartao' ? 'credit_card' : importType === 'investimento' ? 'investment' : 'bank';
       const payload = {
         text_data: extractedText,
         user_id: effectiveUserId || user.id,
         file_name: file.name,
         import_type: importType || 'extrato',
+        source_type: sourceType,
       };
 
       // Para imagens: converte para base64 para que o n8n possa passar ao GPT-4o (visão)
@@ -644,9 +649,20 @@ export default function Dashboard({ user }) {
   const monthlyData = useMemo(() => {
     if (!selectedMonth) return [];
     let filtered = data.filter(item => item.transaction_date?.startsWith(selectedMonth));
+
+    // Anti-duplicidade: se há transações de cartão importadas, oculta o pagamento bulk do extrato bancário
+    const hasCreditCard = filtered.some(item => item.source_type === 'credit_card');
+    if (hasCreditCard) {
+      filtered = filtered.filter(item => {
+        const isBank = !item.source_type || item.source_type === 'bank';
+        if (!isBank) return true;
+        return smartCategory(item) !== 'Cartão de Crédito';
+      });
+    }
+
     if (searchTerm) {
       const lower = searchTerm.toLowerCase();
-      filtered = filtered.filter(item => 
+      filtered = filtered.filter(item =>
         (item.description && item.description.toLowerCase().includes(lower)) ||
         (item.category && item.category.toLowerCase().includes(lower)) ||
         (item.bank && item.bank.toLowerCase().includes(lower))
@@ -709,6 +725,65 @@ export default function Dashboard({ user }) {
     const [y, mm] = m.split('-');
     return new Date(y, mm - 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase();
   };
+
+  const comparativeData = useMemo(() => {
+    if (!selectedMonth || data.length === 0) return null;
+    const [year, month] = selectedMonth.split('-').map(Number);
+
+    const getAgg = (months) => {
+      let income = 0, expense = 0, savings = 0;
+      data.filter(item => months.some(m => item.transaction_date?.startsWith(m))).forEach(item => {
+        const cls = classifyTransaction(item);
+        if (cls === 'income') income += item.amount;
+        else if (cls === 'expense') expense += Math.abs(item.amount);
+        else if (cls === 'savings') savings += Math.abs(item.amount);
+      });
+      return { income, expense, savings, balance: income - expense };
+    };
+
+    const pct = (curr, prev) => prev === 0 ? (curr > 0 ? 100 : 0) : ((curr - prev) / Math.abs(prev)) * 100;
+
+    // Mês vs mês anterior
+    const prevMonthStr = month === 1
+      ? `${year - 1}-12`
+      : `${year}-${String(month - 1).padStart(2, '0')}`;
+    const currM = getAgg([selectedMonth]);
+    const prevM = getAgg([prevMonthStr]);
+
+    // Trimestre vs trimestre anterior
+    const q = Math.ceil(month / 3);
+    const qMonths = (qi, yi) => [0, 1, 2].map(i => {
+      const m = (qi - 1) * 3 + 1 + i;
+      return `${yi}-${String(m).padStart(2, '0')}`;
+    });
+    const prevQ = q === 1 ? 4 : q - 1;
+    const prevQYear = q === 1 ? year - 1 : year;
+    const currQ = getAgg(qMonths(q, year));
+    const prevQAgg = getAgg(qMonths(prevQ, prevQYear));
+
+    // Ano vs ano anterior
+    const yearMonths = (y) => Array.from({ length: 12 }, (_, i) => `${y}-${String(i + 1).padStart(2, '0')}`);
+    const currY = getAgg(yearMonths(year));
+    const prevY = getAgg(yearMonths(year - 1));
+
+    return {
+      month: {
+        curr: currM, prev: prevM,
+        labels: [formatMonth(selectedMonth), formatMonth(prevMonthStr)],
+        changes: { income: pct(currM.income, prevM.income), expense: pct(currM.expense, prevM.expense), balance: pct(currM.balance, prevM.balance) }
+      },
+      quarter: {
+        curr: currQ, prev: prevQAgg,
+        labels: [`Q${q}/${year}`, `Q${prevQ}/${prevQYear}`],
+        changes: { income: pct(currQ.income, prevQAgg.income), expense: pct(currQ.expense, prevQAgg.expense), balance: pct(currQ.balance, prevQAgg.balance) }
+      },
+      year: {
+        curr: currY, prev: prevY,
+        labels: [`${year}`, `${year - 1}`],
+        changes: { income: pct(currY.income, prevY.income), expense: pct(currY.expense, prevY.expense), balance: pct(currY.balance, prevY.balance) }
+      },
+    };
+  }, [data, selectedMonth]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -920,6 +995,83 @@ export default function Dashboard({ user }) {
           </motion.div>
 
         </motion.div>
+
+        {/* Comparative Analysis */}
+        {comparativeData && (
+          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp size={16} className="text-primary" />
+              <h3 className="text-sm font-black text-white uppercase tracking-widest">Análise Comparativa</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { label: 'Mês', key: 'month', data: comparativeData.month },
+                { label: 'Trimestre', key: 'quarter', data: comparativeData.quarter },
+                { label: 'Ano', key: 'year', data: comparativeData.year },
+              ].map(({ label, data: d }) => {
+                const balChange = d.changes.balance;
+                const incChange = d.changes.income;
+                const expChange = d.changes.expense;
+                const fmt = (v) => `R$ ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+                const badge = (v) => (
+                  <span className={`flex items-center gap-0.5 text-[10px] font-black ${v >= 0 ? 'text-success' : 'text-error'}`}>
+                    {v >= 0 ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+                    {Math.abs(v).toFixed(1)}%
+                  </span>
+                );
+                return (
+                  <div key={label} className="glass-card rounded-[2rem] p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">{label}</span>
+                      <div className="text-right">
+                        <p className="text-[9px] text-on-surface-variant/60">{d.labels[0]}</p>
+                        <p className="text-[9px] text-on-surface-variant/40">vs {d.labels[1]}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-on-surface-variant">Saldo</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-white">{fmt(d.curr.balance)}</span>
+                          {badge(balChange)}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-success/80">Entradas</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white">{fmt(d.curr.income)}</span>
+                          {badge(incChange)}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-error/80">Saídas</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white">{fmt(d.curr.expense)}</span>
+                          <span className={`flex items-center gap-0.5 text-[10px] font-black ${expChange <= 0 ? 'text-success' : 'text-error'}`}>
+                            {expChange <= 0 ? <ArrowDownRight size={10} /> : <ArrowUpRight size={10} />}
+                            {Math.abs(expChange).toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mt-1">
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{
+                            width: `${Math.min(100, d.curr.expense > 0 && d.curr.income > 0 ? (d.curr.expense / d.curr.income) * 100 : 0)}%`,
+                            background: d.curr.expense / d.curr.income > 0.9 ? '#ef4444' : d.curr.expense / d.curr.income > 0.7 ? '#facc15' : '#10b981'
+                          }}
+                        />
+                      </div>
+                      <p className="text-[9px] text-on-surface-variant/40 text-right">
+                        {d.curr.income > 0 ? ((d.curr.expense / d.curr.income) * 100).toFixed(0) : 0}% das entradas comprometidas
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.section>
+        )}
 
         {/* Secondary Grid */}
         <motion.div 
@@ -1254,42 +1406,46 @@ export default function Dashboard({ user }) {
         userEmail={user?.email}
       />
 
-      {/* Hidden file input for direct import */}
-      <input
-        id="fileInputExtrato"
-        type="file"
-        accept=".csv,.pdf,.ofx,.jpg,.jpeg,.png"
-        className="hidden"
-        onChange={e => handleFileUpload(e, 'extrato')}
-      />
+      {/* Hidden file inputs */}
+      <input id="fileInputExtrato"     type="file" accept=".csv,.pdf,.ofx,.jpg,.jpeg,.png" className="hidden" onChange={e => handleFileUpload(e, 'extrato')} />
+      <input id="fileInputCartao"      type="file" accept=".csv,.pdf,.ofx,.jpg,.jpeg,.png" className="hidden" onChange={e => handleFileUpload(e, 'cartao')} />
+      <input id="fileInputInvestimento" type="file" accept=".csv,.pdf,.ofx,.jpg,.jpeg,.png" className="hidden" onChange={e => handleFileUpload(e, 'investimento')} />
 
       {/* QuickActionsBar (Fixed Bottom Glass) */}
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60]">
-        <motion.div 
+        <motion.div
           initial={{ y: 100 }}
           animate={{ y: 0 }}
-          className="glass p-2 rounded-full border border-white/10 shadow-3xl flex items-center gap-2"
+          className="glass p-2 rounded-2xl border border-white/10 shadow-3xl flex items-center gap-1.5"
         >
-          <label
-            htmlFor={loading ? undefined : "fileInputExtrato"}
-            className={`flex items-center gap-2 bg-primary hover:bg-secondary text-white px-6 py-3 rounded-full font-bold text-sm transition-all active:scale-95 shadow-lg shadow-primary/30 cursor-pointer ${loading ? 'opacity-60 pointer-events-none' : ''}`}
+          {loading ? (
+            <div className="flex items-center gap-2 px-5 py-3 text-white text-sm font-bold">
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Processando...
+            </div>
+          ) : (
+            <>
+              <label htmlFor="fileInputExtrato" className="flex items-center gap-2 bg-primary hover:bg-secondary text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-md shadow-primary/20">
+                <Plus size={15} /> <span className="hidden sm:inline">Extrato</span>
+              </label>
+              <label htmlFor="fileInputCartao" className="flex items-center gap-2 bg-white/[0.08] hover:bg-white/[0.14] text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer border border-white/10">
+                <CreditCard size={15} /> <span className="hidden sm:inline">Cartão</span>
+              </label>
+              <label htmlFor="fileInputInvestimento" className="flex items-center gap-2 bg-white/[0.08] hover:bg-white/[0.14] text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer border border-white/10">
+                <Landmark size={15} /> <span className="hidden sm:inline">Investimentos</span>
+              </label>
+            </>
+          )}
+
+          <div className="h-8 w-[1px] bg-white/10 mx-1" />
+
+          <button
+            onClick={() => setShowChat(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-on-surface-variant hover:text-white hover:bg-white/5 transition-all text-xs font-bold group"
           >
-            {loading
-              ? <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processando...</>
-              : <><Plus size={18} /> Importar Arquivo</>}
-          </label>
-          
-          <div className="h-8 w-[1px] bg-white/10 mx-1"></div>
-          
-          <div className="flex gap-1 pr-1">
-            <button
-              onClick={() => setShowChat(true)}
-              className="p-3 rounded-full text-on-surface-variant hover:text-white hover:bg-white/5 transition-all text-[12px] font-bold flex items-center gap-2 group"
-            >
-              <MessageSquare size={16} className="group-hover:text-secondary transition-colors" />
-              <span className="hidden sm:inline">Ajuda IA</span>
-            </button>
-          </div>
+            <MessageSquare size={15} className="group-hover:text-secondary transition-colors" />
+            <span className="hidden sm:inline">Ajuda IA</span>
+          </button>
         </motion.div>
       </div>
 
