@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  PieChart, Pie, Cell, ResponsiveContainer, 
+  PieChart, Pie, Cell, Sector, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, AreaChart, Area
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,6 +53,128 @@ function classifyTransaction(item) {
   return item.amount > 0 ? 'income' : 'expense';
 }
 
+
+// Sub-component: Category Donut Chart
+const renderActiveShape = (props) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+  const color = CATEGORY_COLORS[payload.name] || '#8884d8';
+  return (
+    <g>
+      {/* Anel expandido */}
+      <Sector cx={cx} cy={cy} innerRadius={innerRadius - 5} outerRadius={outerRadius + 10}
+        startAngle={startAngle} endAngle={endAngle} fill={color} opacity={1} />
+      {/* Anel externo sutil */}
+      <Sector cx={cx} cy={cy} innerRadius={outerRadius + 14} outerRadius={outerRadius + 17}
+        startAngle={startAngle} endAngle={endAngle} fill={color} opacity={0.4} />
+      {/* Centro: nome */}
+      <text x={cx} y={cy - 22} textAnchor="middle" fill="#f8fafc" fontSize={13} fontWeight={700}>
+        {payload.name}
+      </text>
+      {/* Centro: valor */}
+      <text x={cx} y={cy + 2} textAnchor="middle" fill="#f8fafc" fontSize={18} fontWeight={900}>
+        {`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+      </text>
+      {/* Centro: % */}
+      <text x={cx} y={cy + 22} textAnchor="middle" fill={color} fontSize={12} fontWeight={700}>
+        {`${(percent * 100).toFixed(1)}% das saídas`}
+      </text>
+      {/* Centro: qtd */}
+      <text x={cx} y={cy + 40} textAnchor="middle" fill="rgba(248,250,252,0.4)" fontSize={11}>
+        {`${payload.count} transaç${payload.count === 1 ? 'ão' : 'ões'}`}
+      </text>
+    </g>
+  );
+};
+
+const CategoryChart = ({ chartData }) => {
+  const [activeIndex, setActiveIndex] = React.useState(null);
+  const total = chartData.reduce((s, d) => s + d.value, 0);
+
+  return (
+    <div className="glass-card p-8 rounded-[2.5rem] h-full">
+      <div className="flex items-center gap-2 mb-6">
+        <PieIcon className="text-primary" size={22} />
+        <h3 className="font-black text-xl text-white">Resumo por Categoria</h3>
+      </div>
+
+      {chartData.length === 0 ? (
+        <div className="h-64 flex items-center justify-center text-on-surface-variant text-sm">
+          Sem despesas neste mês.
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {/* Donut */}
+          <div className="h-64 w-full relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%" cy="50%"
+                  innerRadius={72} outerRadius={100}
+                  paddingAngle={3}
+                  dataKey="value"
+                  stroke="none"
+                  activeIndex={activeIndex}
+                  activeShape={renderActiveShape}
+                  onMouseEnter={(_, i) => setActiveIndex(i)}
+                  onMouseLeave={() => setActiveIndex(null)}
+                >
+                  {chartData.map((entry, i) => (
+                    <Cell key={i} fill={CATEGORY_COLORS[entry.name] || '#8884d8'} opacity={activeIndex === null || activeIndex === i ? 1 : 0.35} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+
+            {/* Centro padrão (sem hover) */}
+            {activeIndex === null && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <p className="text-[10px] uppercase font-bold text-on-surface-variant tracking-widest mb-1">Total saídas</p>
+                <p className="text-xl font-black text-white">
+                  R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Legenda com barras */}
+          <div className="space-y-2">
+            {chartData.map((item, i) => {
+              const pct = total > 0 ? (item.value / total) * 100 : 0;
+              const color = CATEGORY_COLORS[item.name] || '#8884d8';
+              return (
+                <div
+                  key={i}
+                  className="group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors cursor-default"
+                  style={{ background: activeIndex === i ? `${color}15` : 'rgba(255,255,255,0.03)' }}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  onMouseLeave={() => setActiveIndex(null)}
+                >
+                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-slate-200 truncate">{item.name}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                        <span className="text-[10px] text-slate-500">{item.count} tx</span>
+                        <span className="text-xs font-bold text-white">
+                          R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-[10px] font-bold w-10 text-right" style={{ color }}>{pct.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                    <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Sub-component: Health Gauge
 const HealthIndicator = ({ income, expense }) => {
@@ -341,10 +463,19 @@ export default function Dashboard({ user }) {
     monthlyData.forEach(item => {
       if (classifyTransaction(item) === 'expense') {
         const cat = item.category || 'Outros';
-        agg[cat] = (agg[cat] || 0) + Math.abs(item.amount);
+        if (!agg[cat]) agg[cat] = { value: 0, count: 0, biggest: 0, biggestDesc: '' };
+        const abs = Math.abs(item.amount);
+        agg[cat].value += abs;
+        agg[cat].count += 1;
+        if (abs > agg[cat].biggest) {
+          agg[cat].biggest = abs;
+          agg[cat].biggestDesc = item.description || '';
+        }
       }
     });
-    return Object.keys(agg).map(name => ({ name, value: agg[name] }));
+    return Object.keys(agg)
+      .map(name => ({ name, ...agg[name] }))
+      .sort((a, b) => b.value - a.value);
   }, [monthlyData]);
 
   const formatMonth = (m) => {
@@ -573,50 +704,8 @@ export default function Dashboard({ user }) {
         >
           
           {/* Charts Card */}
-          <motion.div variants={itemVariants} className="lg:col-span-7 glass-card p-8 rounded-[2.5rem]">
-            <div className="flex justify-between items-center mb-10">
-              <h3 className="font-black text-xl text-white flex items-center gap-2">
-                <PieIcon className="text-primary" size={24} /> Resumo por Categoria
-              </h3>
-              <div className="flex gap-2">
-                 {topCategories.map(([name, val], i) => (
-                   <span key={i} className="text-[9px] font-bold px-2 py-1 rounded-md bg-white/5 border border-white/10 text-on-surface-variant truncate max-w-[80px]">
-                     {name}
-                   </span>
-                 ))}
-              </div>
-            </div>
-            <div className="h-72 w-full">
-               <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <defs>
-                      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
-                        <feOffset dx="0" dy="4" result="offsetblur" />
-                        <feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
-                        <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
-                      </filter>
-                    </defs>
-                    <Pie
-                      data={chartData}
-                      innerRadius={70}
-                      outerRadius={100}
-                      paddingAngle={8}
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name] || '#8884d8'} filter="url(#shadow)" />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1.5rem', color: '#fff', boxShadow: '0 10px 20px rgba(0,0,0,0.5)' }} 
-                      itemStyle={{ color: '#fff' }}
-                      formatter={(val) => `R$ ${val.toLocaleString('pt-BR')}`}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-            </div>
+          <motion.div variants={itemVariants} className="lg:col-span-7">
+            <CategoryChart chartData={chartData} />
           </motion.div>
 
           {/* Transactions List with Search + Filter */}
