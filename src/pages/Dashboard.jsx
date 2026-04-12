@@ -36,12 +36,49 @@ const CATEGORY_COLORS = {
 
 const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
 
+// === SMART AUTO-CATEGORIZATION ===
+const CATEGORY_RULES = [
+  { cat: 'Investimentos',        keywords: ['cdb', 'tesouro', 'fundo', 'aplicação', 'aplicacao', 'poupança', 'poupanca', 'resgate', 'rendimento', 'remuner'] },
+  { cat: 'Moradia',              keywords: ['condomin', 'aluguel', 'iptu', 'água', 'agua', 'gás', 'gas', 'enel', 'cemig', 'copel', 'sabesp', 'sanepar', 'luz', 'energia', 'mediterran'] },
+  { cat: 'Telecomunicações',     keywords: ['telefonica', 'vivo', 'claro', 'tim', 'oi ', 'net ', 'internet', 'nextel', 'telecom'] },
+  { cat: 'Cartão de Crédito',    keywords: ['fatura cartao', 'fatura cartão', 'pagamento cartao', 'pagamento cartão', 'lancamento cartao', 'lançamento cartão', 'bce'] },
+  { cat: 'Impostos & Encargos',  keywords: ['e-social', 'esocial', 'daed', 'darf', 'iof', 'imposto', 'inss', 'fgts', 'pgfn', 'simples', 'nf-e', 'nota fiscal'] },
+  { cat: 'Saúde',                keywords: ['farmacia', 'farmácia', 'drogaria', 'hospital', 'clinica', 'clínica', 'médico', 'medico', 'plano saude', 'plano saúde', 'unimed', 'amil', 'bradesco saude'] },
+  { cat: 'Educação',             keywords: ['escola', 'faculdade', 'universidade', 'mensalidade', 'colégio', 'colegio', 'educac', 'gimenes', 'gomes'] },
+  { cat: 'Viagem & Hospedagem',  keywords: ['hotel', 'hilton', 'marriott', 'airbnb', 'booking', 'passagem', 'aeroporto', 'companhia aerea', 'latam', 'gol ', 'azul '] },
+  { cat: 'Alimentação',          keywords: ['ifood', 'rappi', 'uber eats', 'restaurante', 'padaria', 'mercado', 'supermercado', 'lanchonete', 'delivery'] },
+  { cat: 'Transporte',           keywords: ['uber ', 'cabify', '99 ', 'taxi', 'estacion', 'combustivel', 'combustível', 'posto ', 'pedágio', 'pedagio', 'detran', 'ipva'] },
+  { cat: 'Seguros',              keywords: ['seguro', 'sulamerica', 'porto seguro', 'bradesco seguro', 'allianz'] },
+  { cat: 'Serviços Financeiros', keywords: ['itau unibanco', 'itaú unibanco', 'boleto', 'ted enviada', 'doc enviado', 'sicredi', 'sicoob', 'bradesco', 'santander', 'nu pagamentos', 'btg pactual'] },
+  { cat: 'Transferência',        keywords: ['pix enviado', 'pix recebido', 'transferencia', 'transferência', 'ted', 'doc '] },
+  { cat: 'Assinaturas & SaaS',   keywords: ['netflix', 'spotify', 'amazon', 'google', 'microsoft', 'adobe', 'apple', 'select plus', 'pacote', 'assinatura', 'mensalidade'] },
+];
+
+function smartCategory(item) {
+  const stored = (item.category || '').trim();
+  if (stored && stored !== 'Outros' && stored !== 'outros') return stored;
+  const desc = (item.description || '').toLowerCase();
+  for (const rule of CATEGORY_RULES) {
+    if (rule.keywords.some(k => desc.includes(k))) return rule.cat;
+  }
+  return stored || 'Outros';
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return 'Data não registrada';
+  // transaction_date vem como "2026-02-05T00:00:00+00:00" — extrai só a parte da data
+  const datePart = dateStr.slice(0, 10);
+  const [y, m, d] = datePart.split('-');
+  const months = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  return `${d} ${months[parseInt(m, 10) - 1]} ${y}`;
+}
+
 // === CENTRALIZED CLASSIFICATION SYSTEM ===
 const SAVINGS_CATEGORIES = ['Investimentos', 'Poupança', 'Aplicação', 'CDB', 'Tesouro', 'Fundo'];
 
 function classifyTransaction(item) {
   const desc = (item.description || '').toLowerCase();
-  const cat = (item.category || '');
+  const cat = smartCategory(item);
 
   const isSavings = SAVINGS_CATEGORIES.some(s =>
     cat.toLowerCase().includes(s.toLowerCase()) ||
@@ -768,48 +805,61 @@ export default function Dashboard({ user }) {
                   return visibleItems.map((item, i) => {
                     const cls = classifyTransaction(item);
                     const isPos = item.amount > 0;
+                    const cat = smartCategory(item);
 
                     const styles = {
-                      savings: { bg: 'bg-cyan-500/20 text-cyan-400', icon: <PiggyBank size={18} />, label: 'Cofrinho', color: 'text-cyan-400' },
-                      income:  { bg: 'bg-success/20 text-success', icon: <ArrowUpRight size={18} />, label: item.category, color: 'text-success' },
-                      expense: { bg: 'bg-primary/20 text-primary', icon: <TrendingDown size={18} />, label: item.category, color: 'text-error' },
+                      savings: { bg: 'bg-cyan-500/10', iconBg: 'text-cyan-400', icon: <PiggyBank size={18} />, color: 'text-cyan-400', border: 'border-cyan-500/20' },
+                      income:  { bg: 'bg-success/10',  iconBg: 'text-success',   icon: <ArrowUpRight size={18} />, color: 'text-success', border: 'border-success/20' },
+                      expense: { bg: 'bg-white/[0.03]', iconBg: 'text-primary',  icon: <TrendingDown size={18} />, color: 'text-error',   border: 'border-white/5' },
                     }[cls];
+
+                    const catColor = CATEGORY_COLORS[cat] || '#94a3b8';
+                    const bank = item.bank || (item.metadata?.banco) || null;
 
                     return (
                       <motion.div
-                        key={i}
+                        key={item.id || i}
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         layout
-                        className="group flex items-start gap-4 p-4 rounded-3xl transition-all border border-transparent hover:border-white/10 bg-white/5 hover:bg-white/[0.08]"
+                        className={`group flex items-start gap-3 p-4 rounded-2xl transition-all border ${styles.border} ${styles.bg} hover:bg-white/[0.07] hover:border-white/15`}
                       >
-                        <div className={`w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 ${styles.bg}`}>
+                        {/* Ícone */}
+                        <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 bg-white/5 ${styles.iconBg}`}>
                           {styles.icon}
                         </div>
+
+                        {/* Descrição + categoria + banco */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-white break-words leading-snug group-hover:text-primary transition-colors">{item.description}</p>
-                          <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border bg-white/5 border-white/5 text-on-surface-variant/80">
-                              {styles.label}
+                          <p className="text-[13px] font-bold text-white leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                            {item.description}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                            {/* Badge categoria com cor */}
+                            <span
+                              className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border"
+                              style={{ color: catColor, borderColor: `${catColor}40`, background: `${catColor}15` }}
+                            >
+                              {cat}
                             </span>
-                            <span className="text-[9px] font-bold text-primary/60">
-                              {[
-                                item.bank || 'Banco não identificado',
-                                item.metadata?.import_type === 'fatura' ? 'Fatura' : 'Extrato'
-                              ].join(' · ')}
-                            </span>
+                            {/* Banco */}
+                            {bank && (
+                              <span className="text-[9px] font-semibold text-white/30">
+                                {bank}
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <div className="text-right shrink-0">
+
+                        {/* Valor + data */}
+                        <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
                           <p className={`font-black text-sm whitespace-nowrap ${styles.color}`}>
-                            {hideValues ? 'R$ •••••' : `${isPos ? '+' : ''} R$ ${Math.abs(item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                            {hideValues ? 'R$ •••••' : `${isPos ? '+' : '−'} R$ ${Math.abs(item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                           </p>
-                          <p className="text-[10px] font-semibold text-white/50 mt-0.5">
-            {item.transaction_date
-              ? new Date(item.transaction_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
-              : 'Data não registrada'}
-          </p>
+                          <p className="text-[10px] font-medium text-white/40">
+                            {formatDate(item.transaction_date)}
+                          </p>
                         </div>
                       </motion.div>
                     );
