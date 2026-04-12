@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 const SITE_NAME = 'Extrato Co.';
-const BASE_URL  = 'https://stich-ai-financial.vercel.app';
+const BASE_URL  = 'https://extratobancario.cortezgroup.com.br';
 const OG_IMAGE  = `${BASE_URL}/og.png`;
 
 /**
