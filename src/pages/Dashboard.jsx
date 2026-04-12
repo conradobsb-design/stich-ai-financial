@@ -13,7 +13,8 @@ import {
   FileText, CreditCard, FolderOpen, Building2,
   AlertTriangle, Shield, Sparkles, Lightbulb, Zap,
   Users, UserPlus, Copy, Check, X, Mail, Link,
-  Eye, EyeOff, Sun, Moon
+  Eye, EyeOff, Sun, Moon,
+  MessageSquare, Send, Bot, ChevronDown
 } from 'lucide-react';
 import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 import { useSEO } from '../hooks/useSEO';
@@ -35,6 +36,7 @@ const CATEGORY_COLORS = {
 };
 
 const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
+const CHAT_URL = import.meta.env.VITE_N8N_CHAT_URL;
 
 // === SMART AUTO-CATEGORIZATION ===
 const CATEGORY_RULES = [
@@ -247,6 +249,188 @@ const HealthIndicator = ({ income, expense }) => {
   );
 };
 
+// === AI CHAT DRAWER ===
+const SUGGESTED_QUESTIONS = [
+  'Onde estou gastando mais este mês?',
+  'Como está minha saúde financeira?',
+  'Quais categorias posso reduzir?',
+  'Compare entradas e saídas',
+];
+
+function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, userEmail }) {
+  const [messages, setMessages] = React.useState([]);
+  const [input, setInput] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const bottomRef = React.useRef(null);
+  const inputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (open && messages.length === 0) {
+      setMessages([{
+        role: 'assistant',
+        text: `Olá! Sou o assistente financeiro do Extrato Co. 👋\n\nAnalisei os seus dados de **${selectedMonth || 'este mês'}** e estou pronto para ajudar. O que você gostaria de saber?`,
+      }]);
+    }
+    if (open) setTimeout(() => inputRef.current?.focus(), 300);
+  }, [open]);
+
+  React.useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
+  const send = async (text) => {
+    const question = (text || input).trim();
+    if (!question || loading) return;
+    setInput('');
+    setMessages(prev => [...prev, { role: 'user', text: question }]);
+    setLoading(true);
+    try {
+      const context = {
+        month: selectedMonth,
+        income: aggregates.income,
+        expense: aggregates.expense,
+        savings: aggregates.savings,
+        balance: aggregates.balance,
+        top_categories: topCategories.map(([cat, val]) => ({ category: cat, total: val })),
+      };
+      const res = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'chat', message: question, user_email: userEmail, context }),
+      });
+      const json = await res.json();
+      const reply = json.reply || json.message || json.output || 'Não consegui processar sua pergunta no momento.';
+      setMessages(prev => [...prev, { role: 'assistant', text: reply }]);
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', text: 'Erro ao conectar com o assistente. Tente novamente.' }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70]"
+            onClick={onClose}
+          />
+
+          {/* Drawer */}
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+            className="fixed bottom-0 left-0 right-0 z-[80] max-w-2xl mx-auto"
+          >
+            <div className="glass-card rounded-t-[2rem] border border-outline-variant shadow-2xl flex flex-col"
+              style={{ height: 'min(90vh, 640px)' }}>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
+                    <Bot size={18} className="text-secondary" />
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-sm">Assistente Financeiro</p>
+                    <p className="text-on-surface-variant text-[11px]">Análise inteligente do seu extrato</p>
+                  </div>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-xl text-on-surface-variant hover:text-white hover:bg-white/5 transition-all"
+                >
+                  <ChevronDown size={20} />
+                </button>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+                {messages.map((msg, i) => (
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {msg.role === 'assistant' && (
+                      <div className="w-7 h-7 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center mr-2 flex-shrink-0 mt-0.5">
+                        <Bot size={13} className="text-secondary" />
+                      </div>
+                    )}
+                    <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                      msg.role === 'user'
+                        ? 'bg-primary text-white rounded-tr-sm'
+                        : 'bg-white/[0.06] text-slate-200 rounded-tl-sm border border-white/[0.08]'
+                    }`}>
+                      {msg.text}
+                    </div>
+                  </div>
+                ))}
+
+                {loading && (
+                  <div className="flex justify-start">
+                    <div className="w-7 h-7 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center mr-2 flex-shrink-0">
+                      <Bot size={13} className="text-secondary" />
+                    </div>
+                    <div className="bg-white/[0.06] border border-white/[0.08] px-4 py-3 rounded-2xl rounded-tl-sm flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  </div>
+                )}
+                <div ref={bottomRef} />
+              </div>
+
+              {/* Suggested questions (only if no user messages yet) */}
+              {messages.filter(m => m.role === 'user').length === 0 && !loading && (
+                <div className="px-5 pb-3 flex flex-wrap gap-2">
+                  {SUGGESTED_QUESTIONS.map((q, i) => (
+                    <button
+                      key={i}
+                      onClick={() => send(q)}
+                      className="text-[11px] px-3 py-1.5 rounded-full border border-outline-variant text-on-surface-variant hover:border-primary/50 hover:text-white hover:bg-primary/10 transition-all"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Input */}
+              <div className="px-5 pb-5 pt-2 border-t border-outline-variant">
+                <form
+                  onSubmit={(e) => { e.preventDefault(); send(); }}
+                  className="flex items-center gap-2 bg-white/[0.05] border border-outline-variant rounded-2xl px-4 py-2 focus-within:border-primary/50 transition-all"
+                >
+                  <input
+                    ref={inputRef}
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    placeholder="Pergunte sobre seus dados financeiros..."
+                    className="flex-1 bg-transparent text-white placeholder-on-surface-variant/50 text-sm outline-none"
+                    disabled={loading}
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading || !input.trim()}
+                    className="w-8 h-8 rounded-xl bg-primary disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-all hover:bg-secondary active:scale-95"
+                  >
+                    <Send size={14} className="text-white" />
+                  </button>
+                </form>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export default function Dashboard({ user }) {
   useSEO({ title: 'Painel', description: '', noindex: true });
   const { theme, toggleTheme, hideValues, toggleHideValues } = useApp();
@@ -260,6 +444,11 @@ export default function Dashboard({ user }) {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('todos');
+
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
 
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [members, setMembers] = useState([]);
@@ -1055,6 +1244,16 @@ export default function Dashboard({ user }) {
         )}
       </AnimatePresence>
 
+      {/* AI Chat Drawer */}
+      <ChatDrawer
+        open={showChat}
+        onClose={() => setShowChat(false)}
+        aggregates={aggregates}
+        topCategories={topCategories}
+        selectedMonth={selectedMonth}
+        userEmail={user?.email}
+      />
+
       {/* Hidden file input for direct import */}
       <input
         id="fileInputExtrato"
@@ -1083,8 +1282,12 @@ export default function Dashboard({ user }) {
           <div className="h-8 w-[1px] bg-white/10 mx-1"></div>
           
           <div className="flex gap-1 pr-1">
-            <button className="p-3 rounded-full text-on-surface-variant hover:text-white hover:bg-white/5 transition-all text-[12px] font-bold flex items-center gap-2">
-               <Info size={16} /> <span className="hidden sm:inline">Ajuda IA</span>
+            <button
+              onClick={() => setShowChat(true)}
+              className="p-3 rounded-full text-on-surface-variant hover:text-white hover:bg-white/5 transition-all text-[12px] font-bold flex items-center gap-2 group"
+            >
+              <MessageSquare size={16} className="group-hover:text-secondary transition-colors" />
+              <span className="hidden sm:inline">Ajuda IA</span>
             </button>
           </div>
         </motion.div>
