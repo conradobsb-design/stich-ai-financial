@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useSEO } from '../hooks/useSEO';
 import { motion } from 'framer-motion';
+import { ThemeToggle } from '../components/ThemeToggle.jsx';
 import {
   Upload, BarChart3, Share2, ShieldCheck, Zap, FileText,
   TrendingUp, Users, Clock, ChevronRight, CheckCircle2,
@@ -360,10 +361,11 @@ function Navbar() {
     <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-slate-950/90 backdrop-blur-md border-b border-slate-800/60' : ''}`}>
       <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link to="/" className="font-black text-xl">Extrato Co.</Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <a href="#como-funciona" className="text-slate-400 hover:text-white text-sm font-medium transition-colors hidden sm:block">
             Como funciona
           </a>
+          <ThemeToggle />
           <Link
             to="/login"
             className="px-5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-sm transition-all duration-200"

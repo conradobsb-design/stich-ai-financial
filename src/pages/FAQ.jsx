@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, HelpCircle, ChevronDown } from 'lucide-react';
 import { useSEO } from '../hooks/useSEO';
+import { ThemeToggle } from '../components/ThemeToggle.jsx';
 
 const faqs = [
   {
@@ -156,7 +157,7 @@ export default function FAQ() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-4 mb-8 pt-4"
+          className="flex items-center justify-between mb-8 pt-4"
         >
           <button
             onClick={() => navigate(-1)}
@@ -165,6 +166,7 @@ export default function FAQ() {
             <ArrowLeft size={20} />
             <span className="text-sm">Voltar</span>
           </button>
+          <ThemeToggle />
         </motion.div>
 
         <motion.div
