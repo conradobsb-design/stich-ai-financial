@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { useSEO } from '../hooks/useSEO';
 
 const sections = [
   {
@@ -91,6 +92,10 @@ Não utilizamos cookies de rastreamento comportamental, publicidade ou ferrament
 ];
 
 export default function PoliticaDePrivacidade() {
+  useSEO({
+    title: 'Política de Privacidade',
+    description: 'Saiba como a Cortez Group trata seus dados pessoais na plataforma Extrato Co., em conformidade com a LGPD.',
+  });
   const navigate = useNavigate();
 
   return (

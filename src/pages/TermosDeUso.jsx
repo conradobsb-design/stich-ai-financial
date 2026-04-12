@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, FileText } from 'lucide-react';
+import { useSEO } from '../hooks/useSEO';
 
 const sections = [
   {
@@ -63,6 +64,10 @@ A versão mais recente sempre estará disponível em extratobancario.cortezgroup
 ];
 
 export default function TermosDeUso() {
+  useSEO({
+    title: 'Termos de Uso',
+    description: 'Leia os Termos de Uso da plataforma Extrato Co., operada pela Cortez Group (CNPJ 60.994.700/0001-70).',
+  });
   const navigate = useNavigate();
 
   return (

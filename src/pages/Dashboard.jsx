@@ -16,6 +16,7 @@ import {
   Eye, EyeOff, Sun, Moon
 } from 'lucide-react';
 import { useApp, maskBRL } from '../contexts/AppContext.jsx';
+import { useSEO } from '../hooks/useSEO';
 
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -87,6 +88,7 @@ const HealthIndicator = ({ income, expense }) => {
 };
 
 export default function Dashboard({ user }) {
+  useSEO({ title: 'Painel', description: '', noindex: true });
   const { theme, toggleTheme, hideValues, toggleHideValues } = useApp();
 
   const [data, setData] = useState([]);

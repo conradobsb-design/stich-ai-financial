@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, HelpCircle, ChevronDown } from 'lucide-react';
+import { useSEO } from '../hooks/useSEO';
 
 const faqs = [
   {
@@ -140,6 +141,10 @@ function FAQItem({ item }) {
 }
 
 export default function FAQ() {
+  useSEO({
+    title: 'FAQ',
+    description: 'Perguntas frequentes sobre a plataforma Extrato Co. — conta, extratos, segurança e privacidade.',
+  });
   const navigate = useNavigate();
 
   return (

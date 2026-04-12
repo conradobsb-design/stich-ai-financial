@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
+import { useSEO } from '../hooks/useSEO';
 import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, LogIn, UserPlus, ShieldCheck } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Login() {
+  useSEO({
+    title: 'Entrar',
+    description: 'Acesse seu painel financeiro corporativo Extrato Co.',
+    noindex: true,
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);

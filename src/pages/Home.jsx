@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useSEO } from '../hooks/useSEO';
 
 export default function Home() {
+  useSEO({
+    title: 'Extrato Co. — Painel Financeiro Corporativo',
+    description: 'Importe extratos bancários e visualize tudo em um painel limpo, compartilhável e seguro. Sem planilhas.',
+    canonical: 'https://stich-ai-financial.vercel.app',
+  });
   return (
     <div style={{ backgroundColor: '#020617', minHeight: '100vh', color: '#f8fafc', fontFamily: 'Inter, sans-serif', padding: '40px' }}>
       <h1 style={{ fontSize: 48, fontWeight: 900, marginBottom: 16 }}>Extrato Co.</h1>

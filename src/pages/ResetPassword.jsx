@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { useSEO } from '../hooks/useSEO';
 import { ShieldCheck, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function ResetPassword() {
+  useSEO({ title: 'Redefinir Senha', description: '', noindex: true });
   const navigate = useNavigate();
   const [password, setPassword]     = useState('');
   const [confirm, setConfirm]       = useState('');
