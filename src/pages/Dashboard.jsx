@@ -321,7 +321,6 @@ const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories
                   transition={{ duration: 1, ease: 'easeOut' }}
                 />
               </div>
-              <span className="text-[9px] font-bold text-white/30 w-5 text-right shrink-0">{pts}</span>
               {/* Tooltip */}
               <div className="pointer-events-none absolute bottom-full left-0 mb-2 z-50 w-56 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 <div className="bg-surface-container border border-white/15 rounded-xl px-3 py-2 shadow-xl">
