@@ -646,31 +646,49 @@ export default function Dashboard({ user }) {
     navigate('/login');
   };
 
+  // Detecta quais emissores de cartão foram importados via fatura (source_type = credit_card).
+  // Extrai o emissor do campo `bank` (que guarda o nome do arquivo enviado ao n8n).
+  // Ex: "03_26_Fatura_Itau_20260412.pdf" → 'itau' | "Fatura Sicredi 2026-03.pdf" → 'sicredi'
+  const importedCardIssuers = useMemo(() => {
+    const ISSUER_KEYS = ['itau', 'sicredi', 'nubank', 'bradesco', 'santander', 'c6bank', 'c6 bank',
+      'inter', 'xp', 'btg', 'caixa', 'next', 'neon', 'pan', 'mercado pago', 'picpay', 'will'];
+    const found = new Set();
+    data.forEach(item => {
+      if (item.source_type !== 'credit_card') return;
+      const text = ((item.bank || '') + ' ' + (item.description || '')).toLowerCase();
+      ISSUER_KEYS.forEach(k => { if (text.includes(k)) found.add(k); });
+    });
+    return found;
+  }, [data]);
+
   const monthlyData = useMemo(() => {
     if (!selectedMonth) return [];
     let filtered = data.filter(item => item.transaction_date?.startsWith(selectedMonth));
 
-    // Anti-duplicidade: se há transações de cartão importadas, oculta o pagamento bulk do extrato bancário.
-    // Detecta pagamentos de fatura tanto por categoria quanto por padrões de descrição
-    // (ex: "Pagamento boleto - Itaú Unibanco Holding S.A." que cai em "Serviços Financeiros").
-    const CARD_ISSUERS = ['itau', 'bradesco', 'santander', 'nubank', 'sicredi', 'sicoob',
-      'caixa', 'banco inter', 'c6 bank', 'next', 'neon', 'pan ', 'btg', 'xp cartao',
-      'porto seguro', 'mercado pago', 'picpay', 'will bank'];
-    const isFaturaPayment = (item) => {
-      if (smartCategory(item) === 'Cartão de Crédito') return true;
-      const desc = (item.description || '').toLowerCase();
-      const isBoleto = desc.includes('pagamento boleto') || desc.includes('pgto boleto') ||
-        desc.includes('boleto bancario') || desc.includes('debito automatico fatura') ||
-        desc.includes('deb aut fatura') || desc.includes('pagamento fatura');
-      return isBoleto && CARD_ISSUERS.some(b => desc.includes(b));
-    };
+    // Anti-duplicidade inteligente: quando uma fatura de cartão foi importada, esconde o
+    // pagamento de boleto correspondente no extrato bancário — mesmo que esteja em mês diferente
+    // das compras (ex: compras em jan-fev, boleto pago em mar).
+    // A correlação é feita pelo EMISSOR: "Pagamento boleto - Itaú Unibanco" → emissor 'itau'
+    // → escondido se existe fatura Itaú importada.
+    if (importedCardIssuers.size > 0) {
+      const BOLETO_PATTERNS = ['pagamento boleto', 'pgto boleto', 'boleto bancario',
+        'deb aut fatura', 'debito automatico fatura', 'debito fatura', 'pgto fatura'];
+      const ALL_ISSUERS = ['itau', 'sicredi', 'nubank', 'bradesco', 'santander', 'c6',
+        'inter', 'xp ', 'btg', 'caixa', 'next', 'neon', 'pan ', 'mercado pago', 'picpay'];
 
-    const hasCreditCard = filtered.some(item => item.source_type === 'credit_card');
-    if (hasCreditCard) {
       filtered = filtered.filter(item => {
         const isBank = !item.source_type || item.source_type === 'bank';
         if (!isBank) return true;
-        return !isFaturaPayment(item);
+        if (smartCategory(item) === 'Cartão de Crédito') return false;
+
+        const desc = (item.description || '').toLowerCase();
+        const isBoleto = BOLETO_PATTERNS.some(p => desc.includes(p));
+        if (!isBoleto) return true;
+
+        // Correlaciona: emissor no boleto está entre os emissores com fatura importada?
+        const matchedIssuer = ALL_ISSUERS.find(issuer => desc.includes(issuer));
+        if (!matchedIssuer) return true; // boleto de outro tipo (aluguel, condomínio, etc.)
+        return !importedCardIssuers.has(matchedIssuer);
       });
     }
 
@@ -683,7 +701,7 @@ export default function Dashboard({ user }) {
       );
     }
     return filtered;
-  }, [data, selectedMonth, searchTerm]);
+  }, [data, selectedMonth, searchTerm, importedCardIssuers]);
 
   const availableMonths = useMemo(() => {
     const months = new Set(data.filter(item => item.transaction_date).map(item => item.transaction_date.substring(0, 7)));
