@@ -219,36 +219,113 @@ const CategoryChart = ({ chartData }) => {
   );
 };
 
-// Sub-component: Health Gauge
-const HealthIndicator = ({ income, expense }) => {
-  const ratio = income > 0 ? (expense / income) : (expense > 0 ? 1 : 0);
-  const health = Math.max(0, Math.min(100, (1 - ratio) * 100));
-  
-  let color = "text-success";
-  let msg = "Excelente";
-  if (ratio > 0.9) { color = "text-error"; msg = "Crítico"; }
-  else if (ratio > 0.7) { color = "text-yellow-400"; msg = "Atenção"; }
+// Sub-component: Health Gauge — 7 dimensões ponderadas
+const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories, comparativeData }) => {
+  // D1: Taxa de Gastos (25%)
+  const expRatio = income > 0 ? expense / income : (expense > 0 ? 1 : 0);
+  const d1 = expRatio <= 0.50 ? 100 : expRatio <= 0.70 ? 80 : expRatio <= 0.85 ? 55 : expRatio <= 1.00 ? 25 : 0;
+
+  // D2: Taxa de Poupança líquida (20%)
+  const netApplied = (savingsOut || 0) - (savingsIn || 0);
+  const savingsRate = income > 0 ? netApplied / income : 0;
+  const d2 = netApplied < 0 ? 10
+           : savingsRate >= 0.20 ? 100 : savingsRate >= 0.10 ? 75
+           : savingsRate >= 0.05 ? 50  : savingsRate >= 0.01 ? 25 : 0;
+
+  // D3: Saldo do Mês (15%)
+  const balance = income - expense;
+  const balRatio = income > 0 ? balance / income : (balance > 0 ? 1 : 0);
+  const d3 = balRatio > 0.30 ? 100 : balRatio > 0.15 ? 75 : balRatio > 0.05 ? 50 : balRatio >= 0 ? 25 : 0;
+
+  // D4: Tendência mês vs anterior (10%)
+  const mChg = comparativeData?.month?.changes;
+  const d4 = !mChg ? 50
+           : (mChg.expense < 0 && mChg.income > 0) ? 100
+           : mChg.expense < 0 ? 70
+           : Math.abs(mChg.expense) <= 5 ? 50
+           : mChg.expense <= 10 ? 25 : 0;
+
+  // D5: Tendência trimestre vs anterior (15%)
+  const qChg = comparativeData?.quarter?.changes;
+  const d5 = !qChg ? 50
+           : (qChg.expense < 0 && qChg.income > 0) ? 100
+           : qChg.expense < 0 ? 70
+           : Math.abs(qChg.expense) <= 5 ? 50
+           : qChg.expense <= 15 ? 25 : 0;
+
+  // D6: Tendência ano vs ano (10%)
+  const yChg = comparativeData?.year?.changes;
+  const d6 = !yChg ? 50
+           : yChg.balance > 20 ? 100 : yChg.balance > 5 ? 75
+           : yChg.balance >= -5 ? 50 : yChg.balance >= -20 ? 25 : 0;
+
+  // D7: Concentração de gastos (5%)
+  const topRatio = (topCategories?.[0] && expense > 0) ? topCategories[0][1] / expense : 0;
+  const d7 = expense === 0 ? 100
+           : topRatio < 0.20 ? 100 : topRatio < 0.35 ? 65 : topRatio < 0.50 ? 35 : 10;
+
+  const score = Math.round(d1*0.25 + d2*0.20 + d3*0.15 + d4*0.10 + d5*0.15 + d6*0.10 + d7*0.05);
+
+  const { color, stroke, msg } =
+    score >= 80 ? { color: 'text-success',   stroke: '#10b981', msg: 'Excelente' } :
+    score >= 60 ? { color: 'text-cyan-400',  stroke: '#22d3ee', msg: 'Bom'       } :
+    score >= 40 ? { color: 'text-yellow-400',stroke: '#facc15', msg: 'Atenção'   } :
+    score >= 20 ? { color: 'text-orange-400',stroke: '#fb923c', msg: 'Risco'     } :
+                  { color: 'text-error',      stroke: '#ef4444', msg: 'Crítico'   };
+
+  const dims = [
+    { label: 'Gastos',       pts: d1 },
+    { label: 'Poupança',     pts: d2 },
+    { label: 'Saldo',        pts: d3 },
+    { label: 'Mês',          pts: d4 },
+    { label: 'Trimestre',    pts: d5 },
+    { label: 'Ano vs Ano',   pts: d6 },
+    { label: 'Concentração', pts: d7 },
+  ];
 
   return (
-    <div className="flex flex-col items-center justify-center p-4">
+    <div className="flex flex-col items-center justify-center p-2 w-full">
+      {/* Gauge */}
       <div className="relative w-32 h-32 flex items-center justify-center">
         <svg className="w-full h-full transform -rotate-90">
           <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-surface-container" />
-          <motion.circle 
-            cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" 
-            className={color}
+          <motion.circle
+            cx="64" cy="64" r="58" strokeWidth="8" fill="transparent"
+            stroke={stroke}
             strokeDasharray={364}
             initial={{ strokeDashoffset: 364 }}
-            animate={{ strokeDashoffset: 364 - (364 * health) / 100 }}
-            transition={{ duration: 1.5, ease: "easeOut" }}
+            animate={{ strokeDashoffset: 364 - (364 * score) / 100 }}
+            transition={{ duration: 1.5, ease: 'easeOut' }}
           />
         </svg>
         <div className="absolute flex flex-col items-center">
-          <span className="text-2xl font-black">{Math.round(health)}%</span>
+          <span className={`text-2xl font-black ${color}`}>{score}%</span>
           <span className="text-[10px] uppercase font-bold opacity-60">Saúde</span>
         </div>
       </div>
       <p className={`mt-2 font-bold text-sm ${color}`}>{msg}</p>
+
+      {/* Breakdown por dimensão */}
+      <div className="w-full mt-4 space-y-1.5">
+        {dims.map(({ label, pts }) => {
+          const barColor = pts >= 80 ? '#10b981' : pts >= 60 ? '#22d3ee' : pts >= 40 ? '#facc15' : pts >= 20 ? '#fb923c' : '#ef4444';
+          return (
+            <div key={label} className="flex items-center gap-2">
+              <span className="text-[9px] font-bold text-white/40 w-16 shrink-0 truncate">{label}</span>
+              <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: barColor }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pts}%` }}
+                  transition={{ duration: 1, ease: 'easeOut' }}
+                />
+              </div>
+              <span className="text-[9px] font-bold text-white/30 w-5 text-right shrink-0">{pts}</span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -1041,7 +1118,14 @@ export default function Dashboard({ user }) {
           <motion.div variants={itemVariants} className="md:col-span-4 glass-card rounded-[2.5rem] p-8 flex flex-col border-t border-t-white/10 shadow-2xl">
             <div className="flex flex-col items-center justify-center mb-4">
               <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-widest mb-4">Saúde Financeira</h3>
-              <HealthIndicator income={aggregates.income} expense={aggregates.expense} />
+              <HealthIndicator
+                income={aggregates.income}
+                expense={aggregates.expense}
+                savingsIn={aggregates.savingsIn}
+                savingsOut={aggregates.savingsOut}
+                topCategories={topCategories}
+                comparativeData={comparativeData}
+              />
             </div>
 
             {/* Divider */}
