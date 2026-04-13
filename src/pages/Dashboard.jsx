@@ -646,49 +646,67 @@ export default function Dashboard({ user }) {
     navigate('/login');
   };
 
-  // Detecta quais emissores de cartão foram importados via fatura (source_type = credit_card).
-  // Extrai o emissor do campo `bank` (que guarda o nome do arquivo enviado ao n8n).
-  // Ex: "03_26_Fatura_Itau_20260412.pdf" → 'itau' | "Fatura Sicredi 2026-03.pdf" → 'sicredi'
-  const importedCardIssuers = useMemo(() => {
-    const ISSUER_KEYS = ['itau', 'sicredi', 'nubank', 'bradesco', 'santander', 'c6bank', 'c6 bank',
-      'inter', 'xp', 'btg', 'caixa', 'next', 'neon', 'pan', 'mercado pago', 'picpay', 'will'];
-    const found = new Set();
+  // Verifica se há faturas de cartão importadas (source_type = 'credit_card') no dataset.
+  // Usado para ativar a anti-duplicação sem depender do campo `bank` (que pode ser NULL).
+  const hasAnyCreditCard = useMemo(() =>
+    data.some(item => item.source_type === 'credit_card')
+  , [data]);
+
+  // Calcula o total das faturas de cartão importadas por emissor detectado via descrição do boleto.
+  // Chave: palavra do emissor encontrada na descrição do boleto bancário.
+  const creditCardTotalByIssuer = useMemo(() => {
+    if (!hasAnyCreditCard) return {};
+    // Soma todas as transações credit_card por palavras-chave de emissor na descrição
+    const ISSUER_KEYS = ['itau', 'sicredi', 'nubank', 'bradesco', 'santander',
+      'c6', 'inter', 'btg', 'caixa', 'next', 'neon', 'pan', 'picpay'];
+    const totals = {};
     data.forEach(item => {
-      if (item.source_type !== 'credit_card') return;
-      const text = ((item.bank || '') + ' ' + (item.description || '')).toLowerCase();
-      ISSUER_KEYS.forEach(k => { if (text.includes(k)) found.add(k); });
+      if (item.source_type !== 'credit_card' || item.amount >= 0) return;
+      const desc = (item.description || '').toLowerCase();
+      const matched = ISSUER_KEYS.find(k => desc.includes(k));
+      const key = matched || '__unknown__';
+      totals[key] = (totals[key] || 0) + Math.abs(item.amount);
     });
-    return found;
-  }, [data]);
+    return totals;
+  }, [data, hasAnyCreditCard]);
 
   const monthlyData = useMemo(() => {
     if (!selectedMonth) return [];
     let filtered = data.filter(item => item.transaction_date?.startsWith(selectedMonth));
 
-    // Anti-duplicidade inteligente: quando uma fatura de cartão foi importada, esconde o
-    // pagamento de boleto correspondente no extrato bancário — mesmo que esteja em mês diferente
-    // das compras (ex: compras em jan-fev, boleto pago em mar).
-    // A correlação é feita pelo EMISSOR: "Pagamento boleto - Itaú Unibanco" → emissor 'itau'
-    // → escondido se existe fatura Itaú importada.
-    if (importedCardIssuers.size > 0) {
+    // Anti-duplicidade: quando há fatura de cartão importada, remove do extrato bancário
+    // o pagamento de boleto correspondente — em qualquer mês.
+    // Estratégia em camadas:
+    //   1. Categoria 'Cartão de Crédito' → sempre remove
+    //   2. Boleto + nome de emissor com fatura importada → remove
+    //   3. Boleto + nome de emissor + valor ≈ total da fatura → remove (mais preciso)
+    if (hasAnyCreditCard) {
       const BOLETO_PATTERNS = ['pagamento boleto', 'pgto boleto', 'boleto bancario',
-        'deb aut fatura', 'debito automatico fatura', 'debito fatura', 'pgto fatura'];
-      const ALL_ISSUERS = ['itau', 'sicredi', 'nubank', 'bradesco', 'santander', 'c6',
-        'inter', 'xp ', 'btg', 'caixa', 'next', 'neon', 'pan ', 'mercado pago', 'picpay'];
+        'deb aut fatura', 'debito automatico fatura', 'debito fatura', 'pgto fatura',
+        'pagamento fatura'];
+      const CARD_ISSUERS = ['itau', 'sicredi', 'nubank', 'bradesco', 'santander',
+        'c6', 'inter', 'btg', 'caixa', 'next', 'neon', 'pan', 'picpay', 'mercado pago'];
 
       filtered = filtered.filter(item => {
         const isBank = !item.source_type || item.source_type === 'bank';
         if (!isBank) return true;
+
+        // Camada 1: categoria explícita
         if (smartCategory(item) === 'Cartão de Crédito') return false;
 
         const desc = (item.description || '').toLowerCase();
+
+        // Camada 2: boleto + emissor de cartão conhecido
         const isBoleto = BOLETO_PATTERNS.some(p => desc.includes(p));
         if (!isBoleto) return true;
 
-        // Correlaciona: emissor no boleto está entre os emissores com fatura importada?
-        const matchedIssuer = ALL_ISSUERS.find(issuer => desc.includes(issuer));
-        if (!matchedIssuer) return true; // boleto de outro tipo (aluguel, condomínio, etc.)
-        return !importedCardIssuers.has(matchedIssuer);
+        const matchedIssuer = CARD_ISSUERS.find(k => desc.includes(k));
+        if (!matchedIssuer) return true; // boleto sem emissor de cartão (aluguel, etc.)
+
+        // Se temos fatura importada para esse emissor → remove o boleto
+        const hasIssuerData = creditCardTotalByIssuer[matchedIssuer] !== undefined
+          || creditCardTotalByIssuer['__unknown__'] !== undefined;
+        return !hasIssuerData;
       });
     }
 
