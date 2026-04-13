@@ -456,6 +456,7 @@ export default function Dashboard({ user }) {
   const [maxAmount, setMaxAmount] = useState('');
   const [categoryFilter, setCategoryFilter] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [showFileBadges, setShowFileBadges] = useState(true);
 
   const [showChat, setShowChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
@@ -947,18 +948,29 @@ export default function Dashboard({ user }) {
               </select>
             </div>
             {monthFiles.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 justify-end">
-                {monthFiles.map(({ name, type }) => (
-                  <span key={name} className="flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-full border"
-                    style={{
-                      background: type === 'credit_card' ? 'rgba(139,92,246,0.15)' : type === 'investment' ? 'rgba(0,210,255,0.15)' : 'rgba(16,185,129,0.15)',
-                      borderColor: type === 'credit_card' ? 'rgba(139,92,246,0.4)' : type === 'investment' ? 'rgba(0,210,255,0.4)' : 'rgba(16,185,129,0.4)',
-                      color: type === 'credit_card' ? '#a78bfa' : type === 'investment' ? '#00d2ff' : '#6ee7b7',
-                    }}>
-                    <FileText size={8} />
-                    {name.length > 30 ? name.slice(0, 27) + '...' : name}
-                  </span>
-                ))}
+              <div className="flex flex-col items-end gap-1.5">
+                <button
+                  onClick={() => setShowFileBadges(v => !v)}
+                  className="flex items-center gap-1 text-[9px] font-bold text-white/30 hover:text-white/60 transition-colors"
+                >
+                  {showFileBadges ? <EyeOff size={10} /> : <Eye size={10} />}
+                  {showFileBadges ? 'Ocultar arquivos' : `${monthFiles.length} arquivo${monthFiles.length > 1 ? 's' : ''}`}
+                </button>
+                {showFileBadges && (
+                  <div className="flex flex-wrap gap-1.5 justify-end">
+                    {monthFiles.map(({ name, type }) => (
+                      <span key={name} className="flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-full border"
+                        style={{
+                          background: type === 'credit_card' ? 'rgba(139,92,246,0.15)' : type === 'investment' ? 'rgba(0,210,255,0.15)' : 'rgba(16,185,129,0.15)',
+                          borderColor: type === 'credit_card' ? 'rgba(139,92,246,0.4)' : type === 'investment' ? 'rgba(0,210,255,0.4)' : 'rgba(16,185,129,0.4)',
+                          color: type === 'credit_card' ? '#a78bfa' : type === 'investment' ? '#00d2ff' : '#6ee7b7',
+                        }}>
+                        <FileText size={8} />
+                        {name.length > 30 ? name.slice(0, 27) + '...' : name}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
