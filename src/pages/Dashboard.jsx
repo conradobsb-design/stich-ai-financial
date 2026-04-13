@@ -89,8 +89,8 @@ function classifyTransaction(item) {
     cat.toLowerCase().includes(s.toLowerCase()) ||
     desc.includes(s.toLowerCase())
   );
-  // Resgates (amount > 0) são entrada real de caixa — só saídas para investimento ficam em savings
-  if (isSavings && item.amount < 0) return 'savings';
+  if (isSavings && item.amount < 0) return 'savings_out'; // aplicação
+  if (isSavings && item.amount > 0) return 'savings_in';  // resgate
 
   return item.amount > 0 ? 'income' : 'expense';
 }
@@ -292,7 +292,9 @@ function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, u
         month: selectedMonth,
         income: aggregates.income,
         expense: aggregates.expense,
-        savings: aggregates.savings,
+        savings: aggregates.savingsOut,
+        savingsIn: aggregates.savingsIn,
+        savingsNet: aggregates.savingsNet,
         balance: aggregates.balance,
         top_categories: topCategories.map(([cat, val]) => ({ category: cat, total: val })),
       };
@@ -728,16 +730,22 @@ export default function Dashboard({ user }) {
 
   // === AGGREGATES ===
   const aggregates = useMemo(() => {
-    let income = 0, expense = 0, savings = 0;
+    let income = 0, expense = 0, savingsIn = 0, savingsOut = 0;
     monthlyData.forEach(item => {
       const cls = classifyTransaction(item);
       switch (cls) {
-        case 'savings': savings += Math.abs(item.amount); break;
-        case 'income':  income += item.amount; break;
-        case 'expense': expense += Math.abs(item.amount); break;
+        case 'savings_out': savingsOut += Math.abs(item.amount); break;
+        case 'savings_in':  savingsIn  += item.amount; break;
+        case 'income':      income     += item.amount; break;
+        case 'expense':     expense    += Math.abs(item.amount); break;
       }
     });
-    return { income, expense, savings, balance: income - expense };
+    return {
+      income, expense,
+      savingsIn, savingsOut,
+      savingsNet: savingsIn - savingsOut,
+      balance: income - expense,
+    };
   }, [monthlyData]);
 
   const topCategories = useMemo(() => {
@@ -782,14 +790,15 @@ export default function Dashboard({ user }) {
     const [year, month] = selectedMonth.split('-').map(Number);
 
     const getAgg = (months) => {
-      let income = 0, expense = 0, savings = 0;
+      let income = 0, expense = 0, savingsIn = 0, savingsOut = 0;
       data.filter(item => months.some(m => item.transaction_date?.startsWith(m))).forEach(item => {
         const cls = classifyTransaction(item);
-        if (cls === 'income') income += item.amount;
-        else if (cls === 'expense') expense += Math.abs(item.amount);
-        else if (cls === 'savings') savings += Math.abs(item.amount);
+        if (cls === 'income')      income    += item.amount;
+        else if (cls === 'expense')     expense   += Math.abs(item.amount);
+        else if (cls === 'savings_out') savingsOut += Math.abs(item.amount);
+        else if (cls === 'savings_in')  savingsIn  += item.amount;
       });
-      return { income, expense, savings, balance: income - expense };
+      return { income, expense, savingsIn, savingsOut, savingsNet: savingsIn - savingsOut, balance: income - expense };
     };
 
     const pct = (curr, prev) => prev === 0 ? (curr > 0 ? 100 : 0) : ((curr - prev) / Math.abs(prev)) * 100;
@@ -954,12 +963,27 @@ export default function Dashboard({ user }) {
                   </div>
                   <p className="text-xl font-black text-white">{maskBRL(aggregates.expense, hideValues)}</p>
                 </div>
-                <div className="flex-1 min-w-[120px] glass p-5 rounded-3xl border-l-4" style={{ borderLeftColor: '#00d2ff' }}>
-                  <div className="flex items-center gap-2 font-bold text-[10px] uppercase mb-1" style={{ color: '#00d2ff' }}>
+                <div className="flex-1 min-w-[140px] glass p-5 rounded-3xl border-l-4" style={{ borderLeftColor: '#00d2ff' }}>
+                  <div className="flex items-center gap-2 font-bold text-[10px] uppercase mb-2" style={{ color: '#00d2ff' }}>
                     <PiggyBank size={12} /> Cofrinho
                   </div>
-                  <p className="text-xl font-black text-white">{maskBRL(aggregates.savings, hideValues)}</p>
-                  <p className="text-[9px] font-bold mt-1" style={{ color: '#00d2ff99' }}>Invest. &amp; Poupança</p>
+                  <div className="flex items-center gap-1 mb-1">
+                    <ArrowUpRight size={10} style={{ color: '#4ade80' }} />
+                    <span className="text-[9px] font-bold" style={{ color: '#4ade8099' }}>Resgates</span>
+                    <span className="text-xs font-black text-white ml-auto">{maskBRL(aggregates.savingsIn, hideValues)}</span>
+                  </div>
+                  <div className="flex items-center gap-1 mb-2">
+                    <ArrowDownRight size={10} style={{ color: '#f87171' }} />
+                    <span className="text-[9px] font-bold" style={{ color: '#f8717199' }}>Aplicações</span>
+                    <span className="text-xs font-black text-white ml-auto">{maskBRL(aggregates.savingsOut, hideValues)}</span>
+                  </div>
+                  <div className="border-t border-white/10 pt-2">
+                    <p className="text-[9px] font-bold mb-1" style={{ color: '#00d2ff99' }}>Saldo Líquido</p>
+                    <p className="text-base font-black" style={{ color: aggregates.savingsNet >= 0 ? '#4ade80' : '#f87171' }}>
+                      {maskBRL(Math.abs(aggregates.savingsNet), hideValues)}
+                      <span className="text-[9px] ml-1">{aggregates.savingsNet >= 0 ? '▲' : '▼'}</span>
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

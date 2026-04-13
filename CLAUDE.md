@@ -144,11 +144,13 @@ VITE_N8N_CHAT_URL       ← URL do webhook do chat AI
 
 ## Próximos passos pendentes
 
-1. **Commit + push** da alteração do `Dashboard.jsx` (workerSrc via CDN) no GitHub Desktop
-2. **Redeploy** no Coolify após o push
-3. **Testar upload** da fatura do cartão Sicredi no app
-4. **Verificar** que o boleto da Sicredi desaparece do extrato bancário após a fatura ser importada
-5. **Logout + login** no app para resolver CORS errors do Supabase auth
+1. ~~Commit + push `Dashboard.jsx` (workerSrc via CDN)~~ ✓
+2. ~~Redeploy Coolify~~ ✓
+3. ~~Constraints de fingerprint removidas~~ ✓
+4. ~~n8n workflow v2 publicado com chave correta~~ ✓
+5. Reimportar extrato bancário + fatura cartão (base zerada em 13/04/2026)
+6. Verificar anti-duplicação do boleto Sicredi após reimport
+7. Logout + login no app (CORS Supabase auth)
 
 ---
 
@@ -158,6 +160,58 @@ VITE_N8N_CHAT_URL       ← URL do webhook do chat AI
 - Chave ativa: `extrato co-nova` (5Zf...hgAA)
 - Atualizar no n8n: node Claude API → header `x-api-key`
 - Atualizar no `.env` local
+
+---
+
+## Fase 6 — Integração bancária automática via Pluggy
+
+**Objetivo:** eliminar upload manual de PDFs. Usuário conecta o banco uma vez e os lançamentos chegam automaticamente.
+
+### Arquitetura planejada
+```
+Usuário clica "Conectar banco" no app
+→ Pluggy Connect Widget (OAuth)
+→ Pluggy busca transações periodicamente
+→ Webhook Pluggy → n8n
+→ Claude categoriza → Supabase salva
+→ Dashboard atualiza automaticamente
+```
+
+### Escopo de implementação
+
+**Backend / n8n:**
+- [ ] Criar conta Pluggy (pluggy.ai) e obter `CLIENT_ID` + `CLIENT_SECRET`
+- [ ] Novo n8n workflow: recebe webhook Pluggy → mapeia campos → chama Claude → salva Supabase
+- [ ] Campos Pluggy: `id`, `date`, `description`, `amount`, `type`, `category`, `accountId`
+
+**Frontend:**
+- [ ] Adicionar botão "Conectar banco" no dashboard
+- [ ] Integrar Pluggy Connect Widget (SDK JS): `@pluggy/connect-widget`
+- [ ] Salvar `itemId` do Pluggy por usuário na tabela `stich_ai.connected_accounts`
+- [ ] Exibir status da conexão (conectado/desconectado/erro)
+
+**Supabase:**
+- [ ] Criar tabela `stich_ai.connected_accounts`: `user_id`, `pluggy_item_id`, `bank_name`, `connected_at`, `last_sync_at`
+- [ ] Adicionar campo `pluggy_id` na tabela `transactions` (para evitar duplicatas via upsert)
+
+**Variáveis de ambiente a adicionar:**
+```
+VITE_PLUGGY_CLIENT_ID
+PLUGGY_CLIENT_SECRET   (só no backend/n8n — nunca no frontend)
+```
+
+### Bancos cobertos pelo Pluggy relevantes
+- Sicredi ✓
+- Nubank ✓
+- Itaú ✓
+- Bradesco ✓
+- Santander ✓
+- Banco Inter ✓
+- C6 Bank ✓
+- BTG ✓
+
+### Custo estimado
+~R$0,50 por conexão ativa/mês. Para 10 usuários = ~R$5/mês.
 
 ---
 
