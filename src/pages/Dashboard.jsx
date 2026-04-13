@@ -47,15 +47,15 @@ const CATEGORY_RULES = [
   { cat: 'Impostos & Encargos',  keywords: ['e-social', 'esocial', 'daed', 'darf', 'iof', 'imposto', 'inss', 'fgts', 'pgfn', 'simples', 'nf-e', 'nota fiscal', 'irrf', 'irpf', 'cofins', 'pis/', 'csll', 'iss ', 'icms', 'taxa federal', 'receita federal', 'prefeitura', 'municipio', 'multa '] },
   { cat: 'Saúde',                keywords: ['farmacia', 'farmácia', 'drogaria', 'drogasil', 'droga', 'hospital', 'clinica', 'clínica', 'policlinica', 'policlínica', 'médico', 'medico', 'plano saude', 'plano saúde', 'unimed', 'amil', 'bradesco saude', 'hapvida', 'notredame', 'sulamerica saude', 'odonto', 'dentista', 'laboratorio', 'laboratório', 'exame', 'consulta', 'psicolog', 'terapia', 'fisioter', 'aviva'] },
   { cat: 'Educação',             keywords: ['escola', 'faculdade', 'universidade', 'mensalidade', 'colégio', 'colegio', 'colgio', 'educac', 'curso', 'treinamento', 'capacitacao', 'capacitação', 'alura', 'udemy', 'coursera', 'duolingo', 'material escolar', 'livro', 'livraria', 'lyrs'] },
-  { cat: 'Viagem & Hospedagem',  keywords: ['hotel', 'hilton', 'marriott', 'airbnb', 'booking', 'passagem', 'aeroporto', 'companhia aerea', 'latam', 'gol ', 'azul ', 'decolar', 'hurb', 'hostel', 'resort', 'pousada', 'trivago', 'hotels.com'] },
-  { cat: 'Alimentação',          keywords: ['ifood', 'rappi', 'uber eats', 'restaurante', 'restaurant', 'padaria', 'mercado', 'supermercado', 'lanchonete', 'delivery', 'açougue', 'acougue', 'hortifruti', 'sacolao', 'sacolão', 'pão de açúcar', 'carrefour', 'extra ', 'walmart', 'atacadão', 'atacadao', 'sams club', 'costco', 'pizza', 'hamburguer', 'burguer', 'sushi', 'churrascaria', 'cafe', 'café', 'alimentos', 'gastro', 'gourmet', 'loja onlin', 'mantiqueira', 'spicy', 'marajoara', 'paes e doces', 'pães e doces', 'cbx', 'rodosnack', 'badaue', 'zig mona'] },
+  { cat: 'Viagem & Hospedagem',  keywords: ['hotel', 'hilton', 'marriott', 'airbnb', 'booking', 'passagem', 'aeroporto', 'companhia aerea', 'latam air', 'gol ', 'azul ', 'decolar', 'hurb', 'hostel', 'resort', 'pousada', 'trivago', 'hotels.com', 'localiza', 'movida', 'unidas aluguel', 'daara', 'mar de sonhos', 'dufry'] },
+  { cat: 'Alimentação',          keywords: ['ifood', 'rappi', 'uber eats', 'restaurante', 'restaurant', 'padaria', 'mercado', 'supermercado', 'lanchonete', 'delivery', 'açougue', 'acougue', 'acougues', 'hortifruti', 'sacolao', 'sacolão', 'pão de açúcar', 'carrefour', 'extra ', 'walmart', 'atacadão', 'atacadao', 'sams club', 'costco', 'pizza', 'hamburguer', 'burguer', 'sushi', 'churrascaria', 'churr', 'cafe', 'café', 'alimentos', 'gastro', 'gourmet', 'loja onlin', 'mantiqueira', 'spicy', 'marajoara', 'paes e doces', 'pães e doces', 'cbx', 'rodosnack', 'badaue', 'zig mona', 'jim.com', 't bone', 'hikari', 'pumila', 'rancho', 'tadeufelix', 'lanchonete'] },
   { cat: 'Transporte',           keywords: ['uber ', 'cabify', '99 ', 'taxi', 'estacion', 'combustivel', 'combustível', 'posto ', 'pedágio', 'pedagio', 'detran', 'ipva', 'metrô', 'metro ', 'ônibus', 'onibus', 'bilhete unico', 'bilhete único', 'bom bilhete', 'dpvat', 'licenciamento', 'denatran', 'recarga transporte', 'car wash'] },
   { cat: 'Lazer & Entretenimento', keywords: ['cinema', 'teatro', 'show', 'ingresso', 'ticketmaster', 'sympla', 'eventbrite', 'parque', 'museu', 'clube ', 'academia', 'gym', 'smartfit', 'bluefit', 'bodytech', 'jogo', 'steam', 'playstation', 'xbox', 'nintendo', 'inplay', 'iguasport', 'sport', 'operetta'] },
   { cat: 'Seguros',              keywords: ['seguro', 'sulamerica', 'porto seguro', 'bradesco seguro', 'allianz', 'tokio marine', 'mapfre', 'sompo', 'zurich', 'axa ', 'caixa seguro', 'bb seguro', 'seguro vida', 'seguro auto', 'seguro resid'] },
   { cat: 'Serviços Financeiros', keywords: ['itau unibanco', 'itaú unibanco', 'boleto', 'ted enviada', 'doc enviado', 'sicredi', 'sicoob', 'bradesco', 'santander', 'nu pagamentos', 'btg pactual', 'banco inter', 'caixa economica', 'banco do brasil', 'tarifa', 'taxa bancaria', 'iof ', 'spread', 'juros ', 'emprestimo', 'empréstimo', 'financiamento', 'parcela '] },
   { cat: 'Transferência Interna', keywords: ['pix enviado', 'pix recebido', 'transferencia', 'transferência', 'ted ', 'doc ', 'entre contas', 'portabilidade'] },
   { cat: 'Salário & Receitas',   keywords: ['salario', 'salário', 'vencimento', 'remuneracao', 'remuneração', 'prolabore', 'pro-labore', 'honorarios', 'honorários', 'comissao', 'comissão', 'pagamento recebido', 'recebimento', '13o', '13°', 'ferias', 'férias', 'rescisao', 'rescisão'] },
-  { cat: 'Assinaturas & SaaS',   keywords: ['netflix', 'spotify', 'amazon prime', 'google one', 'microsoft', 'adobe', 'apple', 'applecombill', 'select plus', 'assinatura', 'hbo', 'disney', 'paramount', 'globoplay', 'deezer', 'youtube premium', 'dropbox', 'icloud', 'red feather'] },
+  { cat: 'Assinaturas & SaaS',   keywords: ['netflix', 'spotify', 'amazon prime', 'google one', 'microsoft', 'adobe', 'apple', 'applecombill', 'select plus', 'assinatura', 'hbo', 'disney', 'paramount', 'globoplay', 'deezer', 'youtube premium', 'dropbox', 'icloud', 'red feather', 'kiwify', 'runninghub', 'heygen', 'clube latam', 'latam pass', 'anuidade'] },
   { cat: 'Casa & Utilidades',    keywords: ['casas bahia', 'magazine luiza', 'americanas', 'shoptime', 'leroy merlin', 'tramontina', 'tok&stok', 'mobly', 'moveis', 'móveis', 'magic box', 'eletrodomestico', 'eletrodoméstico', 'reforma', 'decoracao', 'decoração', 'materiais construcao', 'flora', 'flores', 'floricultura', 'mega flora', 'chacara', 'chácaras', 'bucalo', 'estok'] },
 ];
 
@@ -650,13 +650,27 @@ export default function Dashboard({ user }) {
     if (!selectedMonth) return [];
     let filtered = data.filter(item => item.transaction_date?.startsWith(selectedMonth));
 
-    // Anti-duplicidade: se há transações de cartão importadas, oculta o pagamento bulk do extrato bancário
+    // Anti-duplicidade: se há transações de cartão importadas, oculta o pagamento bulk do extrato bancário.
+    // Detecta pagamentos de fatura tanto por categoria quanto por padrões de descrição
+    // (ex: "Pagamento boleto - Itaú Unibanco Holding S.A." que cai em "Serviços Financeiros").
+    const CARD_ISSUERS = ['itau', 'bradesco', 'santander', 'nubank', 'sicredi', 'sicoob',
+      'caixa', 'banco inter', 'c6 bank', 'next', 'neon', 'pan ', 'btg', 'xp cartao',
+      'porto seguro', 'mercado pago', 'picpay', 'will bank'];
+    const isFaturaPayment = (item) => {
+      if (smartCategory(item) === 'Cartão de Crédito') return true;
+      const desc = (item.description || '').toLowerCase();
+      const isBoleto = desc.includes('pagamento boleto') || desc.includes('pgto boleto') ||
+        desc.includes('boleto bancario') || desc.includes('debito automatico fatura') ||
+        desc.includes('deb aut fatura') || desc.includes('pagamento fatura');
+      return isBoleto && CARD_ISSUERS.some(b => desc.includes(b));
+    };
+
     const hasCreditCard = filtered.some(item => item.source_type === 'credit_card');
     if (hasCreditCard) {
       filtered = filtered.filter(item => {
         const isBank = !item.source_type || item.source_type === 'bank';
         if (!isBank) return true;
-        return smartCategory(item) !== 'Cartão de Crédito';
+        return !isFaturaPayment(item);
       });
     }
 
