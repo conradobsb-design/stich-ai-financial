@@ -274,13 +274,13 @@ const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories
                   { color: 'text-error',      stroke: '#ef4444', msg: 'Crítico'   };
 
   const dims = [
-    { label: 'Gastos',       pts: d1 },
-    { label: 'Poupança',     pts: d2 },
-    { label: 'Saldo',        pts: d3 },
-    { label: 'Mês',          pts: d4 },
-    { label: 'Trimestre',    pts: d5 },
-    { label: 'Ano vs Ano',   pts: d6 },
-    { label: 'Concentração', pts: d7 },
+    { label: 'Gastos',       pts: d1, tip: `Taxa de gastos: ${(expRatio*100).toFixed(0)}% da renda virou despesa. Meta: abaixo de 70%. Acima de 100% significa que você gastou mais do que recebeu.` },
+    { label: 'Poupança',     pts: d2, tip: `Poupança líquida: ${(savingsRate*100).toFixed(1)}% da renda foi para investimentos (aplicações menos resgates). Meta ideal: 20%+ da renda mensal.` },
+    { label: 'Saldo',        pts: d3, tip: `Sobra do mês: ${(balRatio*100).toFixed(1)}% da renda ficou disponível depois das despesas. Acima de 15% é considerado saudável.` },
+    { label: 'Mês',          pts: d4, tip: `Tendência mensal: compara despesas e receitas com o mês anterior. Despesas caindo + receitas subindo = pontuação máxima. Sem dados do mês anterior = neutro (50).` },
+    { label: 'Trimestre',    pts: d5, tip: `Tendência trimestral: compara o trimestre atual com o anterior. Período mais confiável que um mês isolado — evita distorções pontuais.` },
+    { label: 'Ano vs Ano',   pts: d6, tip: `Evolução anual: compara o saldo acumulado deste ano com o mesmo período do ano passado. Saldo crescendo acima de 20% = máximo.` },
+    { label: 'Concentração', pts: d7, tip: `Concentração de gastos: maior categoria representa ${(topRatio*100).toFixed(0)}% das despesas. Acima de 50% em uma única categoria indica risco de dependência.` },
   ];
 
   return (
@@ -307,11 +307,11 @@ const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories
 
       {/* Breakdown por dimensão */}
       <div className="w-full mt-4 space-y-1.5">
-        {dims.map(({ label, pts }) => {
+        {dims.map(({ label, pts, tip }) => {
           const barColor = pts >= 80 ? '#10b981' : pts >= 60 ? '#22d3ee' : pts >= 40 ? '#facc15' : pts >= 20 ? '#fb923c' : '#ef4444';
           return (
-            <div key={label} className="flex items-center gap-2">
-              <span className="text-[9px] font-bold text-white/40 w-16 shrink-0 truncate">{label}</span>
+            <div key={label} className="relative group flex items-center gap-2 cursor-default">
+              <span className="text-[9px] font-bold text-white/40 w-16 shrink-0 truncate group-hover:text-white/70 transition-colors">{label}</span>
               <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
@@ -322,6 +322,14 @@ const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories
                 />
               </div>
               <span className="text-[9px] font-bold text-white/30 w-5 text-right shrink-0">{pts}</span>
+              {/* Tooltip */}
+              <div className="pointer-events-none absolute bottom-full left-0 mb-2 z-50 w-56 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <div className="bg-surface-container border border-white/15 rounded-xl px-3 py-2 shadow-xl">
+                  <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">{label}</p>
+                  <p className="text-[11px] text-white/80 leading-relaxed">{tip}</p>
+                </div>
+                <div className="w-2 h-2 bg-surface-container border-b border-r border-white/15 rotate-45 ml-4 -mt-1" />
+              </div>
             </div>
           );
         })}
