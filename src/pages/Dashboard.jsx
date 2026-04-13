@@ -1291,23 +1291,31 @@ export default function Dashboard({ user }) {
                   <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 space-y-3">
                     {/* Value Range */}
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">Faixa de Valor (R$)</p>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          placeholder="Mínimo"
-                          value={minAmount}
-                          onChange={e => setMinAmount(e.target.value)}
-                          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary/50 transition-all placeholder:text-white/20"
-                        />
-                        <span className="text-white/30 text-xs">—</span>
-                        <input
-                          type="number"
-                          placeholder="Máximo"
-                          value={maxAmount}
-                          onChange={e => setMaxAmount(e.target.value)}
-                          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary/50 transition-all placeholder:text-white/20"
-                        />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">Faixa de Valor</p>
+                      <div className="flex items-center gap-2 w-full overflow-hidden">
+                        {/* Mínimo */}
+                        <div className="relative flex-1 min-w-0">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-white/40 pointer-events-none select-none">R$</span>
+                          <input
+                            type="number"
+                            placeholder="Mínimo"
+                            value={minAmount}
+                            onChange={e => setMinAmount(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-2 py-2 text-xs text-white outline-none focus:border-primary/50 transition-all placeholder:text-white/20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          />
+                        </div>
+                        <span className="text-white/30 text-xs shrink-0">—</span>
+                        {/* Máximo */}
+                        <div className="relative flex-1 min-w-0">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-white/40 pointer-events-none select-none">R$</span>
+                          <input
+                            type="number"
+                            placeholder="Máximo"
+                            value={maxAmount}
+                            onChange={e => setMaxAmount(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-2 py-2 text-xs text-white outline-none focus:border-primary/50 transition-all placeholder:text-white/20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          />
+                        </div>
                         {(minAmount !== '' || maxAmount !== '') && (
                           <button
                             onClick={() => { setMinAmount(''); setMaxAmount(''); }}
