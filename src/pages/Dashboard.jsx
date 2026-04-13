@@ -728,6 +728,16 @@ export default function Dashboard({ user }) {
     return Array.from(months).sort().reverse();
   }, [data]);
 
+  // Arquivos importados para o mês selecionado
+  const monthFiles = useMemo(() => {
+    if (!selectedMonth) return [];
+    const files = new Map();
+    data.filter(item => item.transaction_date?.startsWith(selectedMonth) && item.bank).forEach(item => {
+      if (!files.has(item.bank)) files.set(item.bank, item.source_type || 'bank');
+    });
+    return Array.from(files.entries()).map(([name, type]) => ({ name, type }));
+  }, [data, selectedMonth]);
+
   // === AGGREGATES ===
   const aggregates = useMemo(() => {
     let income = 0, expense = 0, savingsIn = 0, savingsOut = 0;
@@ -918,15 +928,32 @@ export default function Dashboard({ user }) {
             <p className="text-on-surface-variant font-medium">Controle total dos seus extratos em tempo real.</p>
           </div>
           
-          <div className="glass p-1.5 rounded-2xl flex items-center border border-outline-variant shadow-lg group">
-            <Calendar className="text-primary ml-3 mr-2 group-hover:scale-110 transition-transform" size={18} />
-            <select 
-              className="bg-transparent border-none text-white font-bold text-sm focus:ring-0 cursor-pointer pr-10 appearance-none"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-            >
-              {availableMonths.map(m => <option key={m} value={m} className="bg-surface">{formatMonth(m)}</option>)}
-            </select>
+          <div className="flex flex-col items-end gap-2">
+            <div className="glass p-1.5 rounded-2xl flex items-center border border-outline-variant shadow-lg group">
+              <Calendar className="text-primary ml-3 mr-2 group-hover:scale-110 transition-transform" size={18} />
+              <select
+                className="bg-transparent border-none text-white font-bold text-sm focus:ring-0 cursor-pointer pr-10 appearance-none"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+              >
+                {availableMonths.map(m => <option key={m} value={m} className="bg-surface">{formatMonth(m)}</option>)}
+              </select>
+            </div>
+            {monthFiles.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 justify-end">
+                {monthFiles.map(({ name, type }) => (
+                  <span key={name} className="flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-full border"
+                    style={{
+                      background: type === 'credit_card' ? 'rgba(139,92,246,0.15)' : type === 'investment' ? 'rgba(0,210,255,0.15)' : 'rgba(16,185,129,0.15)',
+                      borderColor: type === 'credit_card' ? 'rgba(139,92,246,0.4)' : type === 'investment' ? 'rgba(0,210,255,0.4)' : 'rgba(16,185,129,0.4)',
+                      color: type === 'credit_card' ? '#a78bfa' : type === 'investment' ? '#00d2ff' : '#6ee7b7',
+                    }}>
+                    <FileText size={8} />
+                    {name.length > 30 ? name.slice(0, 27) + '...' : name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </motion.section>
 
