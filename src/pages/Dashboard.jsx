@@ -1339,11 +1339,10 @@ export default function Dashboard({ user }) {
                               onClick={() => setCategoryFilter(prev =>
                                 active ? prev.filter(c => c !== cat) : [...prev, cat]
                               )}
-                              className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full border transition-all"
-                              style={active
-                                ? { color, borderColor: color, background: `${color}25` }
-                                : { color: '#ffffff50', borderColor: '#ffffff15', background: 'transparent' }
-                              }
+                              className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full border transition-all ${
+                                active ? '' : 'text-on-surface-variant border-outline-variant bg-transparent hover:text-white/70'
+                              }`}
+                              style={active ? { color, borderColor: color, background: `${color}25` } : undefined}
                             >
                               {cat}
                             </button>
