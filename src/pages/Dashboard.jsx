@@ -14,7 +14,8 @@ import {
   AlertTriangle, Shield, Sparkles, Lightbulb, Zap,
   Users, UserPlus, Copy, Check, X, Mail, Link,
   Eye, EyeOff, Sun, Moon,
-  MessageSquare, Send, Bot, ChevronDown, Landmark
+  MessageSquare, Send, Bot, ChevronDown, Landmark,
+  SlidersHorizontal, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 import { useSEO } from '../hooks/useSEO';
@@ -449,6 +450,12 @@ export default function Dashboard({ user }) {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('todos');
+  const [sortField, setSortField] = useState('date');
+  const [sortDir, setSortDir] = useState('desc');
+  const [minAmount, setMinAmount] = useState('');
+  const [maxAmount, setMaxAmount] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
 
   const [showChat, setShowChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
@@ -1190,55 +1197,171 @@ export default function Dashboard({ user }) {
 
           {/* Transactions List with Search + Filter */}
           <motion.div variants={itemVariants} className="lg:col-span-5 glass-card p-8 rounded-[2.5rem] flex flex-col">
-            {/* Header: Title + Search */}
+            {/* Header: Title + Search + Filter toggle */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
               <h3 className="font-black text-xl text-white">Transações</h3>
-              <div className="relative w-full sm:w-auto">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
-                <input 
-                  type="text" 
-                  placeholder="Pesquisar..." 
-                  className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-9 pr-4 text-xs text-white outline-none focus:border-primary/50 transition-all"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Type Filter Pills */}
-            <div className="flex gap-2 mb-5">
-              {[
-                { key: 'todos',    label: 'Todos' },
-                { key: 'receitas', label: 'Entradas' },
-                { key: 'despesas', label: 'Saídas' },
-              ].map(({ key, label }) => (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:flex-initial">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+                  <input
+                    type="text"
+                    placeholder="Pesquisar..."
+                    className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-9 pr-4 text-xs text-white outline-none focus:border-primary/50 transition-all"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                  />
+                </div>
                 <button
-                  key={key}
-                  onClick={() => setTypeFilter(key)}
-                  className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider transition-all border ${
-                    typeFilter === key
-                      ? key === 'receitas'
-                        ? 'bg-success/20 border-success text-success shadow-sm shadow-success/20'
-                        : key === 'despesas'
-                          ? 'bg-error/20 border-error text-error shadow-sm shadow-error/20'
-                          : 'bg-primary/20 border-primary text-primary shadow-sm shadow-primary/20'
+                  onClick={() => setShowFilters(v => !v)}
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] font-black uppercase tracking-wider transition-all border ${
+                    showFilters
+                      ? 'bg-primary/20 border-primary text-primary'
                       : 'bg-white/5 border-white/10 text-on-surface-variant hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  {label}
+                  <SlidersHorizontal size={12} />
+                  Filtros
                 </button>
-              ))}
+              </div>
             </div>
-            
+
+            {/* Type Filter Pills + Sort controls */}
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex gap-2">
+                {[
+                  { key: 'todos',    label: 'Todos' },
+                  { key: 'receitas', label: 'Entradas' },
+                  { key: 'despesas', label: 'Saídas' },
+                ].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setTypeFilter(key)}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider transition-all border ${
+                      typeFilter === key
+                        ? key === 'receitas'
+                          ? 'bg-success/20 border-success text-success shadow-sm shadow-success/20'
+                          : key === 'despesas'
+                            ? 'bg-error/20 border-error text-error shadow-sm shadow-error/20'
+                            : 'bg-primary/20 border-primary text-primary shadow-sm shadow-primary/20'
+                        : 'bg-white/5 border-white/10 text-on-surface-variant hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {/* Sort controls */}
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => setSortField(f => f === 'date' ? 'amount' : 'date')}
+                  className="px-2.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/5 border border-white/10 text-on-surface-variant hover:bg-white/10 hover:text-white transition-all"
+                >
+                  {sortField === 'date' ? 'Data' : 'Valor'}
+                </button>
+                <button
+                  onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+                  className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-on-surface-variant hover:bg-white/10 hover:text-white transition-all"
+                >
+                  {sortDir === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Expandable Filter Panel */}
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden mb-4"
+                >
+                  <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 space-y-3">
+                    {/* Value Range */}
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">Faixa de Valor (R$)</p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          placeholder="Mínimo"
+                          value={minAmount}
+                          onChange={e => setMinAmount(e.target.value)}
+                          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary/50 transition-all placeholder:text-white/20"
+                        />
+                        <span className="text-white/30 text-xs">—</span>
+                        <input
+                          type="number"
+                          placeholder="Máximo"
+                          value={maxAmount}
+                          onChange={e => setMaxAmount(e.target.value)}
+                          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary/50 transition-all placeholder:text-white/20"
+                        />
+                        {(minAmount !== '' || maxAmount !== '') && (
+                          <button
+                            onClick={() => { setMinAmount(''); setMaxAmount(''); }}
+                            className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-white/40 hover:text-white transition-all shrink-0"
+                          >
+                            <X size={10} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Category Filter */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Categorias</p>
+                        {categoryFilter.length > 0 && (
+                          <button onClick={() => setCategoryFilter([])} className="text-[10px] text-primary hover:text-primary/70 transition-colors">
+                            Limpar
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto custom-scrollbar pr-1">
+                        {[...new Set(monthlyData.map(item => smartCategory(item)))].sort().map(cat => {
+                          const color = CATEGORY_COLORS[cat] || '#94a3b8';
+                          const active = categoryFilter.includes(cat);
+                          return (
+                            <button
+                              key={cat}
+                              onClick={() => setCategoryFilter(prev =>
+                                active ? prev.filter(c => c !== cat) : [...prev, cat]
+                              )}
+                              className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full border transition-all"
+                              style={active
+                                ? { color, borderColor: color, background: `${color}25` }
+                                : { color: '#ffffff50', borderColor: '#ffffff15', background: 'transparent' }
+                              }
+                            >
+                              {cat}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div className="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar max-h-[400px]">
               <AnimatePresence>
                 {(() => {
-                  const visibleItems = monthlyData.filter(item => {
+                  let visibleItems = monthlyData.filter(item => {
                     const cls = classifyTransaction(item);
-                    if (typeFilter === 'receitas') return cls === 'income';
-                    if (typeFilter === 'despesas') return cls === 'expense';
+                    if (typeFilter === 'receitas' && cls !== 'income') return false;
+                    if (typeFilter === 'despesas' && cls !== 'expense') return false;
+                    const abs = Math.abs(item.amount);
+                    if (minAmount !== '' && !isNaN(parseFloat(minAmount)) && abs < parseFloat(minAmount)) return false;
+                    if (maxAmount !== '' && !isNaN(parseFloat(maxAmount)) && abs > parseFloat(maxAmount)) return false;
+                    if (categoryFilter.length > 0 && !categoryFilter.includes(smartCategory(item))) return false;
                     return true;
+                  });
+                  visibleItems = [...visibleItems].sort((a, b) => {
+                    const cmp = sortField === 'amount'
+                      ? Math.abs(a.amount) - Math.abs(b.amount)
+                      : (a.transaction_date || '').localeCompare(b.transaction_date || '');
+                    return sortDir === 'asc' ? cmp : -cmp;
                   });
 
                   if (visibleItems.length === 0) return (
