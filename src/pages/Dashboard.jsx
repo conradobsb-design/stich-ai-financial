@@ -1009,7 +1009,7 @@ export default function Dashboard({ user }) {
               <div className="space-y-3">
                 {(() => {
                   const insights = [];
-                  const { income, expense, savings, balance } = aggregates;
+                  const { income, expense, savingsOut, savingsIn } = aggregates;
 
                   // Insight 1: Spending vs Income
                   if (expense > income && income > 0) {
@@ -1029,12 +1029,12 @@ export default function Dashboard({ user }) {
                   }
 
                   // Insight 2: Savings
-                  if (savings > 0) {
+                  if (savingsOut > 0) {
                     insights.push({
                       icon: Zap,
                       color: 'border-l-primary bg-primary/5',
                       textColor: 'text-primary',
-                      text: `Você guardou R$ ${savings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em investimentos e poupança este mês.`
+                      text: `Você aplicou R$ ${savingsOut.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em investimentos${savingsIn > 0 ? ` e resgatou R$ ${savingsIn.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''} este mês.`
                     });
                   }
 
@@ -1224,10 +1224,11 @@ export default function Dashboard({ user }) {
                     const cat = smartCategory(item);
 
                     const styles = {
-                      savings: { bg: 'bg-cyan-500/10', iconBg: 'text-cyan-400', icon: <PiggyBank size={18} />, color: 'text-cyan-400', border: 'border-cyan-500/20' },
-                      income:  { bg: 'bg-success/10',  iconBg: 'text-success',   icon: <ArrowUpRight size={18} />, color: 'text-success', border: 'border-success/20' },
-                      expense: { bg: 'bg-white/[0.03]', iconBg: 'text-primary',  icon: <TrendingDown size={18} />, color: 'text-error',   border: 'border-white/5' },
-                    }[cls];
+                      savings_out: { bg: 'bg-cyan-500/10', iconBg: 'text-cyan-400', icon: <PiggyBank size={18} />, color: 'text-cyan-400', border: 'border-cyan-500/20' },
+                      savings_in:  { bg: 'bg-cyan-500/10', iconBg: 'text-cyan-400', icon: <PiggyBank size={18} />, color: 'text-cyan-400', border: 'border-cyan-500/20' },
+                      income:      { bg: 'bg-success/10',  iconBg: 'text-success',   icon: <ArrowUpRight size={18} />, color: 'text-success', border: 'border-success/20' },
+                      expense:     { bg: 'bg-white/[0.03]', iconBg: 'text-primary',  icon: <TrendingDown size={18} />, color: 'text-error',   border: 'border-white/5' },
+                    }[cls] || { bg: 'bg-white/[0.03]', iconBg: 'text-primary', icon: <TrendingDown size={18} />, color: 'text-error', border: 'border-white/5' };
 
                     const catColor = CATEGORY_COLORS[cat] || '#94a3b8';
                     const bank = item.bank || (item.metadata?.banco) || null;
