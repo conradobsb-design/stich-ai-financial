@@ -968,13 +968,13 @@ export default function Dashboard({ user }) {
                     <PiggyBank size={12} /> Cofrinho
                   </div>
                   <div className="flex items-center gap-1 mb-1">
-                    <ArrowUpRight size={10} style={{ color: '#4ade80' }} />
-                    <span className="text-[9px] font-bold" style={{ color: '#4ade8099' }}>Resgates</span>
+                    <ArrowUpRight size={10} style={{ color: '#f87171' }} />
+                    <span className="text-[9px] font-bold" style={{ color: '#f8717199' }}>Resgates</span>
                     <span className="text-xs font-black text-white ml-auto">{maskBRL(aggregates.savingsIn, hideValues)}</span>
                   </div>
                   <div className="flex items-center gap-1 mb-2">
-                    <ArrowDownRight size={10} style={{ color: '#f87171' }} />
-                    <span className="text-[9px] font-bold" style={{ color: '#f8717199' }}>Aplicações</span>
+                    <ArrowDownRight size={10} style={{ color: '#4ade80' }} />
+                    <span className="text-[9px] font-bold" style={{ color: '#4ade8099' }}>Aplicações</span>
                     <span className="text-xs font-black text-white ml-auto">{maskBRL(aggregates.savingsOut, hideValues)}</span>
                   </div>
                   <div className="border-t border-white/10 pt-2">
