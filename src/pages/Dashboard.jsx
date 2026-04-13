@@ -1249,13 +1249,17 @@ export default function Dashboard({ user }) {
                     key={key}
                     onClick={() => setTypeFilter(key)}
                     className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider transition-all border ${
-                      typeFilter === key
-                        ? key === 'receitas'
+                      key === 'receitas'
+                        ? typeFilter === key
                           ? 'bg-success/20 border-success text-success shadow-sm shadow-success/20'
-                          : key === 'despesas'
+                          : 'bg-success/5 border-success/30 text-success/60 hover:bg-success/10 hover:text-success hover:border-success/60'
+                        : key === 'despesas'
+                          ? typeFilter === key
                             ? 'bg-error/20 border-error text-error shadow-sm shadow-error/20'
-                            : 'bg-primary/20 border-primary text-primary shadow-sm shadow-primary/20'
-                        : 'bg-white/5 border-white/10 text-on-surface-variant hover:bg-white/10 hover:text-white'
+                            : 'bg-error/5 border-error/30 text-error/60 hover:bg-error/10 hover:text-error hover:border-error/60'
+                          : typeFilter === key
+                            ? 'bg-primary/20 border-primary text-primary shadow-sm shadow-primary/20'
+                            : 'bg-white/5 border-white/10 text-on-surface-variant hover:bg-white/10 hover:text-white'
                     }`}
                   >
                     {label}
