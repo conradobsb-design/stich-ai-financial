@@ -719,7 +719,7 @@ export default function Dashboard({ user }) {
       );
     }
     return filtered;
-  }, [data, selectedMonth, searchTerm, importedCardIssuers]);
+  }, [data, selectedMonth, searchTerm, hasAnyCreditCard, creditCardTotalByIssuer]);
 
   const availableMonths = useMemo(() => {
     const months = new Set(data.filter(item => item.transaction_date).map(item => item.transaction_date.substring(0, 7)));
