@@ -15,7 +15,7 @@ import {
   Users, UserPlus, Copy, Check, X, Mail, Link,
   Eye, EyeOff, Sun, Moon,
   MessageSquare, Send, Bot, ChevronDown, Landmark,
-  SlidersHorizontal, ArrowUp, ArrowDown
+  SlidersHorizontal, ArrowUp, ArrowDown, Upload
 } from 'lucide-react';
 import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 import { useSEO } from '../hooks/useSEO';
@@ -1662,29 +1662,45 @@ export default function Dashboard({ user }) {
             </div>
           ) : (
             <>
-              <label htmlFor="fileInputExtrato" className="flex items-center gap-2 bg-primary hover:bg-secondary text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-md shadow-primary/20">
-                <Plus size={15} /> <span className="hidden sm:inline">Extrato</span>
+              {/* Extrato — azul */}
+              <label htmlFor="fileInputExtrato" className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-md shadow-blue-500/30">
+                <Upload size={13} />
+                <FileText size={13} />
+                <span className="hidden sm:inline">Extrato</span>
               </label>
-              <label htmlFor="fileInputCartao" className="flex items-center gap-2 bg-white/[0.08] hover:bg-white/[0.14] text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer border border-white/10">
-                <CreditCard size={15} /> <span className="hidden sm:inline">Cartão</span>
+
+              {/* Cartão — roxo */}
+              <label htmlFor="fileInputCartao" className="flex items-center gap-2 bg-violet-500 hover:bg-violet-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-md shadow-violet-500/30">
+                <Upload size={13} />
+                <CreditCard size={13} />
+                <span className="hidden sm:inline">Cartão</span>
               </label>
-              <label htmlFor="fileInputInvestimento" className="flex items-center gap-2 bg-white/[0.08] hover:bg-white/[0.14] text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer border border-white/10">
-                <Landmark size={15} /> <span className="hidden sm:inline">Investimentos</span>
+
+              {/* Investimentos — ciano */}
+              <label htmlFor="fileInputInvestimento" className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-md shadow-cyan-500/30">
+                <Upload size={13} />
+                <Landmark size={13} />
+                <span className="hidden sm:inline">Investimentos</span>
               </label>
             </>
           )}
-
-          <div className="h-8 w-[1px] bg-white/10 mx-1" />
-
-          <button
-            onClick={() => setShowChat(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-on-surface-variant hover:text-white hover:bg-white/5 transition-all text-xs font-bold group"
-          >
-            <MessageSquare size={15} className="group-hover:text-secondary transition-colors" />
-            <span className="hidden sm:inline">Ajuda IA</span>
-          </button>
         </motion.div>
       </div>
+
+      {/* Ajuda IA — FAB flutuante canto inferior direito */}
+      <motion.button
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.5, type: 'spring', stiffness: 200 }}
+        onClick={() => setShowChat(true)}
+        className="fixed bottom-8 right-8 z-[60] w-14 h-14 rounded-full bg-secondary hover:bg-secondary/90 text-white shadow-xl shadow-secondary/40 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group"
+        title="Ajuda IA"
+      >
+        <MessageSquare size={22} />
+        <span className="absolute right-16 bg-surface border border-outline-variant text-on-surface text-xs font-bold px-3 py-1.5 rounded-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg">
+          Ajuda IA
+        </span>
+      </motion.button>
 
     </div>
   );
