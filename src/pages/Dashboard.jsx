@@ -1097,15 +1097,15 @@ export default function Dashboard({ user }) {
                 return (
                   <div key={label} className="glass-card rounded-[2rem] p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">{label}</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white">{label}</span>
                       <div className="text-right">
-                        <p className="text-[9px] text-on-surface-variant/60">{d.labels[0]}</p>
-                        <p className="text-[9px] text-on-surface-variant/40">vs {d.labels[1]}</p>
+                        <p className="text-[9px] text-white/70">{d.labels[0]}</p>
+                        <p className="text-[9px] text-white/50">vs {d.labels[1]}</p>
                       </div>
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-on-surface-variant">Saldo</span>
+                        <span className="text-[11px] text-white/70">Saldo</span>
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-black text-white">{fmt(d.curr.balance)}</span>
                           {badge(balChange)}
@@ -1137,7 +1137,7 @@ export default function Dashboard({ user }) {
                           }}
                         />
                       </div>
-                      <p className="text-[9px] text-on-surface-variant/40 text-right">
+                      <p className="text-[9px] text-white/50 text-right">
                         {d.curr.income > 0 ? ((d.curr.expense / d.curr.income) * 100).toFixed(0) : 0}% das entradas comprometidas
                       </p>
                     </div>
