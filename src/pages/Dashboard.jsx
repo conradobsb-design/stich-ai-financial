@@ -1446,6 +1446,7 @@ export default function Dashboard({ user }) {
                   prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]
                 );
                 setTypeFilter('despesas');
+                setTimeout(() => transactionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
               }}
             />
           </motion.div>
@@ -1490,7 +1491,7 @@ export default function Dashboard({ user }) {
                 ].map(({ key, label }) => (
                   <button
                     key={key}
-                    onClick={() => setTypeFilter(key)}
+                    onClick={() => { setTypeFilter(key); setCategoryFilter([]); }}
                     className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider transition-all border ${
                       key === 'receitas'
                         ? typeFilter === key
