@@ -11,6 +11,7 @@ const ResetPassword        = lazy(() => import('./pages/ResetPassword'));
 const TermosDeUso          = lazy(() => import('./pages/TermosDeUso'));
 const PoliticaDePrivacidade = lazy(() => import('./pages/PoliticaDePrivacidade'));
 const FAQ                  = lazy(() => import('./pages/FAQ'));
+const Pricing              = lazy(() => import('./pages/Pricing'));
 
 function PageLoader() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/termos-de-uso"            element={<TermosDeUso />} />
           <Route path="/politica-de-privacidade" element={<PoliticaDePrivacidade />} />
           <Route path="/faq"            element={<FAQ />} />
+          <Route path="/pricing"        element={<Pricing />} />
           <Route
             path="/dashboard"
             element={<ProtectedRoute><Dashboard /></ProtectedRoute>}

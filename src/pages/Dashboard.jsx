@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 import { useSEO } from '../hooks/useSEO';
+import { useSubscription } from '../hooks/useSubscription';
+import FeatureGate from '../components/FeatureGate';
 
 import * as pdfjsLib from 'pdfjs-dist';
 // Carrega worker via CDN para evitar erro de MIME type do nginx com .mjs
@@ -555,6 +557,8 @@ export default function Dashboard({ user }) {
   const categoryChartRef = useRef(null);
   const transactionsRef = useRef(null);
   const navigate = useNavigate();
+
+  const { canAccess, plan: userPlan, isTrial, trialDaysLeft } = useSubscription(user?.id);
 
   const [selectedMonth, setSelectedMonth] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -1258,7 +1262,16 @@ export default function Dashboard({ user }) {
         
         <div className="flex items-center gap-2">
           <div className="hidden sm:flex flex-col items-end mr-2">
-            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Usuário Premium</span>
+            {isTrial && trialDaysLeft !== null ? (
+              <button onClick={() => navigate('/pricing')} className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full transition-all hover:opacity-80"
+                style={{ background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.3)' }}>
+                Trial · {trialDaysLeft}d restantes
+              </button>
+            ) : (
+              <button onClick={() => navigate('/pricing')} className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest hover:text-white transition-colors">
+                {userPlan === 'free' ? 'Plano Gratuito' : userPlan === 'essencial' ? 'Essencial' : userPlan === 'private' ? 'Private' : userPlan === 'family_office' ? 'Family Office' : 'Ver Planos'}
+              </button>
+            )}
             <span className="text-xs font-medium text-white/80">{user?.email}</span>
           </div>
           <button
@@ -1288,9 +1301,9 @@ export default function Dashboard({ user }) {
 
           {/* Soraya IA */}
           <button
-            onClick={openSoraya}
+            onClick={() => canAccess('soraya') ? openSoraya() : navigate('/pricing')}
             className="relative p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-yellow-400"
-            title="Soraya IA — Sugestões"
+            title={canAccess('soraya') ? 'Soraya IA — Sugestões' : 'Soraya IA — Plano Family Office'}
           >
             <Lightbulb size={20} />
             {suggestions.filter(s => s.status === 'new' && s.author_id !== user?.id).length > 0 && (
@@ -1493,7 +1506,7 @@ export default function Dashboard({ user }) {
               </div>
 
               {/* Previsões preditivas — Prophet (preferencial) ou modelos locais */}
-              {(prophetPredictions || predictions) && (() => {
+              {(prophetPredictions || predictions) && (canAccess('prophet') ? (() => {
                 const fmt = (v) => `R$ ${Math.abs(v).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
                 const sign = (v) => v >= 0 ? '+' : '−';
 
@@ -1617,7 +1630,9 @@ export default function Dashboard({ user }) {
                     })}
                   </div>
                 );
-              })()}
+              })() : (
+                <FeatureGate canAccess={false} requiredPlan="private" label="Projeções Preditivas — Prophet · Monte Carlo · HHI" />
+              ))}
 
             </div>
             {/* Background Accent */}
@@ -2430,9 +2445,10 @@ export default function Dashboard({ user }) {
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.5, type: 'spring', stiffness: 200 }}
-        onClick={() => setShowChat(true)}
+        onClick={() => canAccess('chat_ia') ? setShowChat(true) : navigate('/pricing')}
         className="fixed bottom-8 right-8 z-[60] w-14 h-14 rounded-full bg-secondary hover:bg-secondary/90 text-white shadow-xl shadow-secondary/40 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group"
-        title="Ajuda IA"
+        title={canAccess('chat_ia') ? 'Ajuda IA' : 'Chat IA — Plano Private'}
+
       >
         <MessageSquare size={22} />
         <span className="absolute right-16 bg-surface border border-outline-variant text-on-surface text-xs font-bold px-3 py-1.5 rounded-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg">
