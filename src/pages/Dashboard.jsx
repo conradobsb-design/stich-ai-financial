@@ -330,8 +330,8 @@ const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories
         {dims.map(({ label, pts, tip }) => {
           const barColor = pts >= 80 ? '#10b981' : pts >= 60 ? '#22d3ee' : pts >= 40 ? '#facc15' : pts >= 20 ? '#fb923c' : '#ef4444';
           return (
-            <div key={label} className="relative group flex items-center gap-2 cursor-default">
-              <span className="text-[9px] font-bold text-white/40 w-16 shrink-0 truncate group-hover:text-white/70 transition-colors">{label}</span>
+            <div key={label} className="flex items-center gap-2 cursor-default">
+              <span className="text-[9px] font-bold text-white/40 w-14 shrink-0 truncate">{label}</span>
               <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
@@ -341,13 +341,16 @@ const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories
                   transition={{ duration: 1, ease: 'easeOut' }}
                 />
               </div>
-              {/* Tooltip */}
-              <div className="pointer-events-none absolute bottom-full left-0 mb-2 z-50 w-56 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <div className="bg-surface-container border border-white/15 rounded-xl px-3 py-2 shadow-xl">
-                  <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">{label}</p>
-                  <p className="text-[11px] text-white/80 leading-relaxed">{tip}</p>
+              {/* Info icon com tooltip */}
+              <div className="relative group/info shrink-0">
+                <Info size={9} className="text-white/20 hover:text-white/60 transition-colors cursor-help" />
+                <div className="pointer-events-none absolute bottom-full right-0 mb-2 z-50 w-60 opacity-0 group-hover/info:opacity-100 transition-opacity duration-200">
+                  <div className="bg-surface-container border border-white/15 rounded-xl px-3 py-2 shadow-xl">
+                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">{label}</p>
+                    <p className="text-[11px] text-white/80 leading-relaxed">{tip}</p>
+                  </div>
+                  <div className="w-2 h-2 bg-surface-container border-b border-r border-white/15 rotate-45 ml-auto mr-1 -mt-1" />
                 </div>
-                <div className="w-2 h-2 bg-surface-container border-b border-r border-white/15 rotate-45 ml-4 -mt-1" />
               </div>
             </div>
           );
@@ -1533,13 +1536,32 @@ export default function Dashboard({ user }) {
                   ];
                 }
 
-                const colorMap = {
-                  success: { dot: '#4ade80', bg: 'rgba(74,222,128,0.06)',  border: 'rgba(74,222,128,0.2)'  },
-                  error:   { dot: '#f87171', bg: 'rgba(248,113,113,0.06)', border: 'rgba(248,113,113,0.2)' },
-                  warning: { dot: '#facc15', bg: 'rgba(250,204,21,0.06)',  border: 'rgba(250,204,21,0.2)'  },
-                  primary: { dot: '#818cf8', bg: 'rgba(129,140,248,0.06)', border: 'rgba(129,140,248,0.2)' },
-                  neutral: { dot: '#64748b', bg: 'rgba(100,116,139,0.06)', border: 'rgba(100,116,139,0.2)' },
+                // Cor de status (ponto indicador)
+                const statusDot = {
+                  success: '#4ade80',
+                  error:   '#f87171',
+                  warning: '#facc15',
+                  primary: '#818cf8',
+                  neutral: '#64748b',
                 };
+
+                // Cor de acento distinta por slot (P1→P5), independente do status
+                const slotAccents = [
+                  { color: '#22d3ee', bg: 'rgba(34,211,238,0.06)',  border: 'rgba(34,211,238,0.22)'  }, // cyan   — Curto prazo
+                  { color: '#a78bfa', bg: 'rgba(167,139,250,0.06)', border: 'rgba(167,139,250,0.22)' }, // violet — Médio prazo
+                  { color: '#6366f1', bg: 'rgba(99,102,241,0.06)',  border: 'rgba(99,102,241,0.22)'  }, // indigo — Longo prazo
+                  { color: '#fb923c', bg: 'rgba(251,146,60,0.06)',  border: 'rgba(251,146,60,0.22)'  }, // orange — Concentração
+                  { color: '#34d399', bg: 'rgba(52,211,153,0.06)',  border: 'rgba(52,211,153,0.22)'  }, // emerald — Equilíbrio
+                ];
+
+                // Tooltips explicativos por slot
+                const slotTips = [
+                  'Holt Double Exponential Smoothing com índice sazonal por mês calendário. Projeta o saldo do próximo mês ajustando tendência e padrões históricos de gastos.',
+                  'Índice sazonal calculado com 6+ meses de histórico. Identifica o mês de pico de gastos e projeta o saldo acumulado dos próximos 3 meses.',
+                  'Monte Carlo: 1.000 simulações × 12 meses com distribuição Normal. P50 = cenário base · P10 = pessimista · P90 = otimista. Quanto mais histórico, mais preciso.',
+                  'Índice Herfindahl-Hirschman (HHI). Mede diversificação: HHI < 0,20 = bem distribuído · 0,20–0,35 = moderado · > 0,35 = risco de concentração setorial.',
+                  'Padrão CFP®: reserva de emergência ideal = 6× despesa mensal média. Calcula em quantos meses o superávit atual cobre essa meta de segurança.',
+                ];
 
                 return (
                   <div className="space-y-2">
@@ -1562,16 +1584,33 @@ export default function Dashboard({ user }) {
                         <p className="text-[10px] text-white/40">Prophet calculando projeções...</p>
                       </div>
                     ) : items.map((item, i) => {
-                      const c = colorMap[item.level] || colorMap.neutral;
+                      const accent = slotAccents[i] || slotAccents[4];
+                      const dot    = statusDot[item.level] || statusDot.neutral;
+                      const tip    = slotTips[i] || '';
                       return (
-                        <div key={i} className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl border" style={{ background: c.bg, borderColor: c.border }}>
-                          <div className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: c.dot }} />
+                        <div key={i} className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl border" style={{ background: accent.bg, borderColor: accent.border }}>
+                          {/* Status dot */}
+                          <div className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: dot }} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 mb-0.5">
-                              <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: c.dot }}>{item.label}</span>
+                              <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: accent.color }}>{item.label}</span>
                               <span className="text-[8px] text-white/20">{item.horizon}</span>
                             </div>
                             <p className="text-[10px] text-white/70 leading-snug">{item.text}</p>
+                          </div>
+                          {/* Info icon com tooltip de metodologia */}
+                          <div className="relative group/ptip shrink-0 mt-0.5">
+                            <Info size={10} className="transition-colors cursor-help" style={{ color: `${accent.color}60` }}
+                              onMouseEnter={e => e.currentTarget.style.color = accent.color}
+                              onMouseLeave={e => e.currentTarget.style.color = `${accent.color}60`}
+                            />
+                            <div className="pointer-events-none absolute bottom-full right-0 mb-2 z-50 w-64 opacity-0 group-hover/ptip:opacity-100 transition-opacity duration-200">
+                              <div className="bg-surface-container border border-white/15 rounded-xl px-3 py-2.5 shadow-xl">
+                                <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: accent.color }}>{item.label}</p>
+                                <p className="text-[11px] text-white/75 leading-relaxed">{tip}</p>
+                              </div>
+                              <div className="w-2 h-2 bg-surface-container border-b border-r border-white/15 rotate-45 ml-auto mr-1 -mt-1" />
+                            </div>
                           </div>
                         </div>
                       );
