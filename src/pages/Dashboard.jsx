@@ -162,6 +162,8 @@ const CategoryChart = ({ chartData, onCategoryClick, selectedCategories }) => {
                   activeShape={renderActiveShape}
                   onMouseEnter={(_, i) => setActiveIndex(i)}
                   onMouseLeave={() => setActiveIndex(null)}
+                  onClick={(_, i) => onCategoryClick?.(chartData[i]?.name)}
+                  style={{ cursor: 'pointer' }}
                 >
                   {chartData.map((entry, i) => (
                     <Cell key={i} fill={CATEGORY_COLORS[entry.name] || '#8884d8'} opacity={activeIndex === null || activeIndex === i ? 1 : 0.35} />
