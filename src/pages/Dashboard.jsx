@@ -16,7 +16,7 @@ import {
   Eye, EyeOff, Sun, Moon,
   MessageSquare, Send, Bot, ChevronDown, Landmark,
   SlidersHorizontal, ArrowUp, ArrowDown, Upload,
-  Lightbulb, CheckCircle, Archive, Clock
+  CheckCircle, Archive, Clock
 } from 'lucide-react';
 import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 import { useSEO } from '../hooks/useSEO';
