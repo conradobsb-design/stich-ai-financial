@@ -26,15 +26,25 @@ import * as pdfjsLib from 'pdfjs-dist';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 const CATEGORY_COLORS = {
-  'Alimentação': '#38bdf8',
-  'Transporte': '#0ea5e9',
-  'Saúde': '#818cf8',
-  'Moradia': '#a855f7',
-  'Lazer': '#10b981',
-  'Educação': '#f472b6',
-  'Transferência Interna': '#64748b',
-  'Investimentos': '#00d2ff',
-  'Outros': '#94a3b8'
+  'Alimentação':           '#f97316', // laranja
+  'Transporte':            '#3b82f6', // azul
+  'Saúde':                 '#ec4899', // rosa
+  'Moradia':               '#f59e0b', // âmbar
+  'Lazer':                 '#84cc16', // verde-limão
+  'Lazer & Entretenimento':'#84cc16', // verde-limão
+  'Educação':              '#8b5cf6', // violeta
+  'Transferência Interna': '#64748b', // cinza-ardósia
+  'Investimentos':         '#06b6d4', // ciano
+  'Telecomunicações':      '#6366f1', // índigo
+  'Cartão de Crédito':     '#a855f7', // roxo
+  'Impostos & Encargos':   '#ef4444', // vermelho
+  'Viagem & Hospedagem':   '#14b8a6', // teal
+  'Vestuário':             '#f472b6', // rosa-claro
+  'Pet':                   '#10b981', // esmeralda
+  'Assinaturas':           '#eab308', // amarelo
+  'Serviços Financeiros':  '#0ea5e9', // azul-céu
+  'Poupança':              '#22d3ee', // ciano-claro
+  'Outros':                '#94a3b8', // cinza
 };
 
 const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
