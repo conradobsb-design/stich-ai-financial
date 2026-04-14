@@ -1878,7 +1878,7 @@ export default function Dashboard({ user }) {
                 ) : suggestions.map(s => {
                   const isMine = s.author_id === user?.id;
                   const statusStyles = {
-                    new:         { label: 'Nova',         cls: 'bg-yellow-400/15 text-yellow-400 border-yellow-400/30',  icon: <Clock size={10} /> },
+                    new:         { label: 'Nova',         cls: `bg-yellow-400/20 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-700'} border-yellow-500/40`,  icon: <Clock size={10} /> },
                     read:        { label: 'Lida',         cls: 'bg-white/10 text-white/40 border-white/10',              icon: <Clock size={10} /> },
                     implemented: { label: 'Implementada', cls: 'bg-success/15 text-success border-success/30',           icon: <CheckCircle size={10} /> },
                     archived:    { label: 'Arquivada',    cls: 'bg-white/5 text-white/25 border-white/10',               icon: <Archive size={10} /> },
