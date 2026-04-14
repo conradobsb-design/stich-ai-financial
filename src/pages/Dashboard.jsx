@@ -896,12 +896,11 @@ export default function Dashboard({ user }) {
         case 'expense':     expense    += Math.abs(item.amount); break;
       }
     });
-    return {
-      income, expense,
-      savingsIn, savingsOut,
-      savingsNet: savingsIn - savingsOut,
-      balance: income - expense,
-    };
+    const savingsNet = savingsIn - savingsOut;
+    const balance = income - expense;
+    // Erosão de patrimônio: resgatou mais do que aplicou E gastou mais do que recebeu
+    const patrimonioErosion = savingsIn > savingsOut && expense > income;
+    return { income, expense, savingsIn, savingsOut, savingsNet, balance, patrimonioErosion };
   }, [monthlyData]);
 
   const topCategories = useMemo(() => {
@@ -1140,10 +1139,15 @@ export default function Dashboard({ user }) {
           <motion.div variants={itemVariants} className="md:col-span-8 glass-card p-10 rounded-[2.5rem] relative overflow-hidden group">
             <div className="relative z-10 flex flex-col h-full justify-between">
               <div>
-                <div className="flex items-center gap-2 mb-2 text-primary font-bold tracking-[0.2em] text-[10px] uppercase">
+                <div className={`flex items-center gap-2 mb-2 font-bold tracking-[0.2em] text-[10px] uppercase ${aggregates.patrimonioErosion ? 'text-error' : 'text-primary'}`}>
                   <Activity size={12} /> Saldo Líquido do Mês
+                  {aggregates.patrimonioErosion && (
+                    <span className="ml-1 flex items-center gap-1 bg-error/15 border border-error/30 text-error px-2 py-0.5 rounded-full text-[9px] font-black tracking-normal normal-case">
+                      ⚠ Erosão de patrimônio
+                    </span>
+                  )}
                 </div>
-                <div className="text-[4rem] md:text-[5rem] leading-none font-black text-white tracking-tighter text-glow">
+                <div className={`text-[4rem] md:text-[5rem] leading-none font-black tracking-tighter text-glow ${aggregates.patrimonioErosion ? 'text-error' : 'text-white'}`}>
                   {maskBRL(aggregates.balance, hideValues)}
                 </div>
               </div>
@@ -1177,10 +1181,19 @@ export default function Dashboard({ user }) {
                   </div>
                   <div className="border-t border-white/10 pt-2">
                     <p className="text-[9px] font-bold mb-1" style={{ color: '#00d2ff99' }}>Saldo Líquido</p>
-                    <p className="text-base font-black" style={{ color: aggregates.savingsNet >= 0 ? '#4ade80' : '#f87171' }}>
+                    <p className="text-base font-black" style={{
+                      color: aggregates.patrimonioErosion ? '#f87171'
+                           : aggregates.savingsNet >= 0   ? '#4ade80'
+                           : '#f87171'
+                    }}>
                       {maskBRL(Math.abs(aggregates.savingsNet), hideValues)}
                       <span className="text-[9px] ml-1">{aggregates.savingsNet >= 0 ? '▲' : '▼'}</span>
                     </p>
+                    {aggregates.patrimonioErosion && (
+                      <p className="text-[8px] text-error/70 font-bold mt-0.5 leading-tight">
+                        Resgate cobriu déficit mensal
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
