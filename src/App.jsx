@@ -12,6 +12,7 @@ const TermosDeUso          = lazy(() => import('./pages/TermosDeUso'));
 const PoliticaDePrivacidade = lazy(() => import('./pages/PoliticaDePrivacidade'));
 const FAQ                  = lazy(() => import('./pages/FAQ'));
 const Pricing              = lazy(() => import('./pages/Pricing'));
+const Onboarding           = lazy(() => import('./pages/Onboarding'));
 
 function PageLoader() {
   return (
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/politica-de-privacidade" element={<PoliticaDePrivacidade />} />
           <Route path="/faq"            element={<FAQ />} />
           <Route path="/pricing"        element={<Pricing />} />
+          <Route path="/onboarding"     element={<Onboarding />} />
           <Route
             path="/dashboard"
             element={<ProtectedRoute><Dashboard /></ProtectedRoute>}

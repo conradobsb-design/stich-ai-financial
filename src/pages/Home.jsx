@@ -62,7 +62,7 @@ function Hero() {
 
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            to="/login"
+            to="/pricing"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-lg transition-all duration-200 shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40 hover:-translate-y-0.5"
           >
             Começar grátis

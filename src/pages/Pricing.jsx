@@ -90,8 +90,7 @@ function PlanCard({ plan, annual, index }) {
   const stripeLink = STRIPE_LINKS[plan.id]?.[annual ? 'annual' : 'monthly'] || '#';
 
   const handleSubscribe = () => {
-    if (stripeLink === '#') { alert('Em breve!'); return; }
-    window.location.href = stripeLink;
+    navigate(`/onboarding?plan=${plan.id}`);
   };
 
   return (
