@@ -15,7 +15,8 @@ import {
   Users, UserPlus, Copy, Check, X, Mail, Link,
   Eye, EyeOff, Sun, Moon,
   MessageSquare, Send, Bot, ChevronDown, Landmark,
-  SlidersHorizontal, ArrowUp, ArrowDown, Upload
+  SlidersHorizontal, ArrowUp, ArrowDown, Upload,
+  Lightbulb, CheckCircle, Archive, Clock
 } from 'lucide-react';
 import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 import { useSEO } from '../hooks/useSEO';
@@ -129,7 +130,7 @@ const renderActiveShape = (props) => {
   );
 };
 
-const CategoryChart = ({ chartData }) => {
+const CategoryChart = ({ chartData, onCategoryClick, selectedCategories }) => {
   const [activeIndex, setActiveIndex] = React.useState(null);
   const total = chartData.reduce((s, d) => s + d.value, 0);
 
@@ -188,10 +189,17 @@ const CategoryChart = ({ chartData }) => {
               return (
                 <div
                   key={i}
-                  className="group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors cursor-default"
-                  style={{ background: activeIndex === i ? `${color}15` : 'rgba(255,255,255,0.03)' }}
+                  className="group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer select-none"
+                  style={{
+                    background: selectedCategories?.includes(item.name)
+                      ? `${color}22`
+                      : activeIndex === i ? `${color}15` : 'rgba(255,255,255,0.03)',
+                    boxShadow: selectedCategories?.includes(item.name) ? `inset 0 0 0 1.5px ${color}60` : 'none',
+                  }}
                   onMouseEnter={() => setActiveIndex(i)}
                   onMouseLeave={() => setActiveIndex(null)}
+                  onClick={() => onCategoryClick?.(item.name)}
+                  title={selectedCategories?.includes(item.name) ? 'Clique para remover filtro' : 'Clique para filtrar'}
                 >
                   <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
                   <div className="flex-1 min-w-0">
@@ -541,6 +549,10 @@ export default function Dashboard({ user }) {
   const [categoryFilter, setCategoryFilter] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
   const [showFileBadges, setShowFileBadges] = useState(true);
+  const [showSoraya, setShowSoraya] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [newSuggestion, setNewSuggestion] = useState('');
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
 
   const [showChat, setShowChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
@@ -555,6 +567,48 @@ export default function Dashboard({ user }) {
   const [copied, setCopied] = useState(false);
 
   const isOwner = effectiveUserId === user?.id;
+
+  const authorName = (email) =>
+    email === 'chaibub@gmail.com'    ? 'Soraya'
+    : email === 'conradobsb@gmail.com' ? 'Conrado'
+    : email?.split('@')[0] || 'Usuário';
+
+  const fetchSuggestions = async () => {
+    const { data } = await supabase.schema('stich_ai').from('suggestions')
+      .select('*').order('created_at', { ascending: false });
+    if (data) setSuggestions(data);
+  };
+
+  const submitSuggestion = async () => {
+    if (!newSuggestion.trim() || !user) return;
+    setSuggestionLoading(true);
+    await supabase.schema('stich_ai').from('suggestions').insert({
+      author_id: user.id,
+      author_email: user.email,
+      author_name: authorName(user.email),
+      content: newSuggestion.trim(),
+      status: 'new',
+    });
+    setNewSuggestion('');
+    await fetchSuggestions();
+    setSuggestionLoading(false);
+  };
+
+  const setSuggestionStatus = async (id, status) => {
+    await supabase.schema('stich_ai').from('suggestions').update({ status }).eq('id', id);
+    await fetchSuggestions();
+  };
+
+  const openSoraya = async () => {
+    setShowSoraya(true);
+    await fetchSuggestions();
+    // Marca como lidas as sugestões de outros usuários
+    const unread = suggestions.filter(s => s.status === 'new' && s.author_id !== user?.id);
+    await Promise.all(unread.map(s =>
+      supabase.schema('stich_ai').from('suggestions').update({ status: 'read' }).eq('id', s.id)
+    ));
+    if (unread.length > 0) await fetchSuggestions();
+  };
 
   const fetchMembers = async () => {
     if (!effectiveUserId) return;
@@ -651,7 +705,7 @@ export default function Dashboard({ user }) {
         console.warn("Supabase fetch failed:", err.message);
       }
     };
-    if (user?.id) fetchHistory();
+    if (user?.id) { fetchHistory(); fetchSuggestions(); }
   }, [user]);
 
   const handleFileUpload = async (e, importType) => {
@@ -999,6 +1053,20 @@ export default function Dashboard({ user }) {
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
+          {/* Soraya IA */}
+          <button
+            onClick={openSoraya}
+            className="relative p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-yellow-400"
+            title="Soraya IA — Sugestões"
+          >
+            <Lightbulb size={20} />
+            {suggestions.filter(s => s.status === 'new' && s.author_id !== user?.id).length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full text-[9px] font-black text-black flex items-center justify-center">
+                {suggestions.filter(s => s.status === 'new' && s.author_id !== user?.id).length}
+              </span>
+            )}
+          </button>
+
           <button onClick={handleLogout} className="p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white">
             <LogOut size={20} />
           </button>
@@ -1295,7 +1363,16 @@ export default function Dashboard({ user }) {
           
           {/* Charts Card */}
           <motion.div variants={itemVariants} className="lg:col-span-7">
-            <CategoryChart chartData={chartData} />
+            <CategoryChart
+              chartData={chartData}
+              selectedCategories={categoryFilter}
+              onCategoryClick={name => {
+                setCategoryFilter(prev =>
+                  prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]
+                );
+                setTypeFilter('despesas');
+              }}
+            />
           </motion.div>
 
           {/* Transactions List with Search + Filter */}
@@ -1745,6 +1822,125 @@ export default function Dashboard({ user }) {
         selectedMonth={selectedMonth}
         userEmail={user?.email}
       />
+
+      {/* ── Soraya IA Drawer ─────────────────────────────────────── */}
+      <AnimatePresence>
+        {showSoraya && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-[70] backdrop-blur-sm"
+              onClick={() => setShowSoraya(false)}
+            />
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+              className="fixed right-0 top-0 h-full w-full max-w-md z-[80] glass border-l border-white/10 flex flex-col shadow-2xl"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-yellow-400/20 border border-yellow-400/30 flex items-center justify-center">
+                    <Lightbulb size={18} className="text-yellow-400" />
+                  </div>
+                  <div>
+                    <h2 className="font-black text-white text-base">Soraya IA</h2>
+                    <p className="text-[10px] text-white/40 font-medium">Sugestões para a plataforma</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowSoraya(false)} className="p-2 rounded-xl hover:bg-white/10 text-white/40 hover:text-white transition-all">
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Lista de sugestões */}
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3 custom-scrollbar">
+                {suggestions.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-40 gap-3 text-white/30">
+                    <Lightbulb size={32} />
+                    <p className="text-sm font-medium">Nenhuma sugestão ainda.</p>
+                  </div>
+                ) : suggestions.map(s => {
+                  const isMine = s.author_id === user?.id;
+                  const statusStyles = {
+                    new:         { label: 'Nova',         cls: 'bg-yellow-400/15 text-yellow-400 border-yellow-400/30',  icon: <Clock size={10} /> },
+                    read:        { label: 'Lida',         cls: 'bg-white/10 text-white/40 border-white/10',              icon: <Clock size={10} /> },
+                    implemented: { label: 'Implementada', cls: 'bg-success/15 text-success border-success/30',           icon: <CheckCircle size={10} /> },
+                    archived:    { label: 'Arquivada',    cls: 'bg-white/5 text-white/25 border-white/10',               icon: <Archive size={10} /> },
+                  }[s.status] || { label: s.status, cls: 'bg-white/10 text-white/40 border-white/10', icon: null };
+
+                  return (
+                    <motion.div
+                      key={s.id}
+                      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                      className={`p-4 rounded-2xl border transition-all ${isMine ? 'bg-primary/5 border-primary/20' : 'bg-white/[0.04] border-white/10'}`}
+                    >
+                      {/* Meta */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isMine ? 'bg-primary/20 text-primary' : 'bg-yellow-400/20 text-yellow-400'}`}>
+                            {s.author_name}
+                          </span>
+                          <span className="text-[10px] text-white/30">
+                            {new Date(s.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <span className={`flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full border ${statusStyles.cls}`}>
+                          {statusStyles.icon} {statusStyles.label}
+                        </span>
+                      </div>
+                      {/* Conteúdo */}
+                      <p className="text-sm text-white/80 leading-relaxed">{s.content}</p>
+                      {/* Ações (só quem não escreveu pode mudar status) */}
+                      {!isMine && s.status !== 'archived' && (
+                        <div className="flex gap-2 mt-3">
+                          {s.status !== 'implemented' && (
+                            <button
+                              onClick={() => setSuggestionStatus(s.id, 'implemented')}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-success/10 border border-success/20 text-success hover:bg-success/20 transition-all"
+                            >
+                              <CheckCircle size={10} /> Implementar
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setSuggestionStatus(s.id, 'archived')}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-white/5 border border-white/10 text-white/40 hover:bg-white/10 transition-all"
+                          >
+                            <Archive size={10} /> Arquivar
+                          </button>
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Input nova sugestão */}
+              <div className="px-6 py-4 border-t border-white/10">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/30 mb-2">
+                  Nova sugestão — {authorName(user?.email)}
+                </p>
+                <textarea
+                  value={newSuggestion}
+                  onChange={e => setNewSuggestion(e.target.value)}
+                  placeholder="Descreva sua sugestão para a plataforma..."
+                  rows={3}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-yellow-400/50 transition-all placeholder:text-white/20 resize-none"
+                />
+                <button
+                  onClick={submitSuggestion}
+                  disabled={!newSuggestion.trim() || suggestionLoading}
+                  className="mt-2 w-full py-2.5 rounded-xl font-black text-sm bg-yellow-400 hover:bg-yellow-300 text-black transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {suggestionLoading ? <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : <><Lightbulb size={14} /> Enviar Sugestão</>}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Hidden file inputs */}
       <input id="fileInputExtrato"     type="file" accept=".csv,.pdf,.ofx,.jpg,.jpeg,.png" className="hidden" onChange={e => handleFileUpload(e, 'extrato')} />
