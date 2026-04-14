@@ -331,7 +331,18 @@ const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories
           const barColor = pts >= 80 ? '#10b981' : pts >= 60 ? '#22d3ee' : pts >= 40 ? '#facc15' : pts >= 20 ? '#fb923c' : '#ef4444';
           return (
             <div key={label} className="flex items-center gap-2 cursor-default">
-              <span className="text-[9px] font-bold text-white/40 w-14 shrink-0 truncate">{label}</span>
+              {/* Label + ícone — tooltip ativado por hover no grupo inteiro */}
+              <div className="relative group/info flex items-center gap-1 w-16 shrink-0 cursor-help">
+                <span className="text-[9px] font-bold text-white/40 truncate group-hover/info:text-white/70 transition-colors">{label}</span>
+                <Info size={8} className="shrink-0 text-white/20 group-hover/info:text-white/60 transition-colors" />
+                <div className="pointer-events-none absolute bottom-full left-0 mb-2 z-50 w-60 opacity-0 group-hover/info:opacity-100 transition-opacity duration-200">
+                  <div className="bg-surface-container border border-white/15 rounded-xl px-3 py-2 shadow-xl">
+                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">{label}</p>
+                    <p className="text-[11px] text-white/80 leading-relaxed">{tip}</p>
+                  </div>
+                  <div className="w-2 h-2 bg-surface-container border-b border-r border-white/15 rotate-45 ml-4 -mt-1" />
+                </div>
+              </div>
               <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
@@ -340,17 +351,6 @@ const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories
                   animate={{ width: `${pts}%` }}
                   transition={{ duration: 1, ease: 'easeOut' }}
                 />
-              </div>
-              {/* Info icon com tooltip */}
-              <div className="relative group/info shrink-0">
-                <Info size={9} className="text-white/20 hover:text-white/60 transition-colors cursor-help" />
-                <div className="pointer-events-none absolute bottom-full right-0 mb-2 z-50 w-60 opacity-0 group-hover/info:opacity-100 transition-opacity duration-200">
-                  <div className="bg-surface-container border border-white/15 rounded-xl px-3 py-2 shadow-xl">
-                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">{label}</p>
-                    <p className="text-[11px] text-white/80 leading-relaxed">{tip}</p>
-                  </div>
-                  <div className="w-2 h-2 bg-surface-container border-b border-r border-white/15 rotate-45 ml-auto mr-1 -mt-1" />
-                </div>
               </div>
             </div>
           );
