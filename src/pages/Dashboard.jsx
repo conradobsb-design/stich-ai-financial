@@ -1014,6 +1014,139 @@ export default function Dashboard({ user }) {
     };
   }, [data, selectedMonth]);
 
+  // === MONTHLY HISTORY (base para modelos preditivos) ===
+  const monthlyHistory = useMemo(() => {
+    const byMonth = {};
+    data.forEach(item => {
+      const m = (item.transaction_date || '').slice(0, 7);
+      if (!m) return;
+      if (!byMonth[m]) byMonth[m] = { income: 0, expense: 0, savingsOut: 0, savingsIn: 0 };
+      const cls = classifyTransaction(item);
+      if (cls === 'income')      byMonth[m].income    += item.amount;
+      else if (cls === 'expense')     byMonth[m].expense   += Math.abs(item.amount);
+      else if (cls === 'savings_out') byMonth[m].savingsOut += Math.abs(item.amount);
+      else if (cls === 'savings_in')  byMonth[m].savingsIn  += item.amount;
+    });
+    return Object.entries(byMonth)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, v]) => ({ month, ...v, balance: v.income - v.expense }));
+  }, [data]);
+
+  // === PREDICTIVE ENGINE ===
+  const predictions = useMemo(() => {
+    const n = monthlyHistory.length;
+    if (n < 3) return null;
+
+    const expenses = monthlyHistory.map(m => m.expense);
+    const incomes  = monthlyHistory.map(m => m.income);
+
+    // --- Holt's Double Exponential Smoothing ---
+    const holt = (series, alpha = 0.4, beta = 0.3, horizon = 12) => {
+      let L = series[0], T = series[1] - series[0];
+      for (let i = 1; i < series.length; i++) {
+        const prevL = L;
+        L = alpha * series[i] + (1 - alpha) * (L + T);
+        T = beta * (L - prevL) + (1 - beta) * T;
+      }
+      return Array.from({ length: horizon }, (_, h) => Math.max(0, L + (h + 1) * T));
+    };
+
+    const expProj12 = holt(expenses);
+    const incProj12 = holt(incomes);
+
+    // --- Índice Sazonal por mês calendário ---
+    const seasonalIndex = {};
+    if (n >= 6) {
+      const globalAvg = expenses.reduce((a, b) => a + b, 0) / n;
+      const groups = {};
+      monthlyHistory.forEach(({ month, expense }) => {
+        const m = parseInt(month.slice(5, 7));
+        if (!groups[m]) groups[m] = [];
+        groups[m].push(expense);
+      });
+      Object.entries(groups).forEach(([m, vals]) => {
+        const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+        seasonalIndex[parseInt(m)] = globalAvg > 0 ? avg / globalAvg : 1;
+      });
+    }
+
+    const [selY, selM] = (selectedMonth || new Date().toISOString().slice(0, 7)).split('-').map(Number);
+    const nextMonths = Array.from({ length: 12 }, (_, h) => {
+      const d = new Date(selY, selM - 1 + h + 1, 1);
+      return d.getMonth() + 1; // 1-12
+    });
+
+    const seasonalExpProj = expProj12.map((v, i) => v * (seasonalIndex[nextMonths[i]] || 1));
+
+    // --- Desvio padrão histórico ---
+    const std = (arr) => {
+      const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+      return Math.sqrt(arr.reduce((s, x) => s + (x - mean) ** 2, 0) / arr.length);
+    };
+    const expStd = std(expenses);
+    const incStd = std(incomes);
+
+    // --- Monte Carlo (1.000 simulações × 12 meses) ---
+    const randn = () => {
+      let u, v;
+      do { u = Math.random(); v = Math.random(); } while (u === 0);
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    };
+
+    const SIMS = 1000;
+    const annualBalances = Array.from({ length: SIMS }, () => {
+      let bal = 0;
+      for (let m = 0; m < 12; m++) {
+        const si = seasonalIndex[nextMonths[m]] || 1;
+        const simExp = Math.max(0, expProj12[m] * si + randn() * expStd);
+        const simInc = Math.max(0, incProj12[m] + randn() * incStd);
+        bal += simInc - simExp;
+      }
+      return bal;
+    }).sort((a, b) => a - b);
+
+    const p10 = annualBalances[Math.floor(SIMS * 0.10)];
+    const p50 = annualBalances[Math.floor(SIMS * 0.50)];
+    const p90 = annualBalances[Math.floor(SIMS * 0.90)];
+
+    // --- Construção das previsões ---
+    const fmt = (v) => `R$ ${Math.abs(v).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
+    const monthNames = ['', 'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+    // P1 — Curto prazo (Holt + sazonalidade, 1 mês à frente)
+    const p1Exp = seasonalExpProj[0];
+    const p1Inc = incProj12[0];
+    const p1Bal = p1Inc - p1Exp;
+    const p1 = p1Bal < 0
+      ? { text: `Próximo mês: déficit projetado de ${fmt(p1Bal)} (Holt + sazonalidade). Gastos devem superar renda.`, level: 'error' }
+      : { text: `Próximo mês: saldo projetado de +${fmt(p1Bal)}. Renda supera despesas previstas com sazonalidade.`, level: 'success' };
+
+    // P2 — Médio prazo (sazonalidade + concentração)
+    let p2;
+    if (n >= 6) {
+      const peakEntry = Object.entries(seasonalIndex).sort(([, a], [, b]) => b - a)[0];
+      const peakM = peakEntry ? parseInt(peakEntry[0]) : null;
+      const peakSI = peakEntry ? peakEntry[1] : 1;
+      const q3Bal = [0, 1, 2].reduce((s, i) => s + incProj12[i] - seasonalExpProj[i], 0);
+      if (peakSI > 1.15 && peakM) {
+        p2 = { text: `${monthNames[peakM].toUpperCase()} historicamente ${((peakSI - 1) * 100).toFixed(0)}% acima da média de gastos. Próximo trimestre: ${q3Bal >= 0 ? '+' : ''}${fmt(q3Bal)} projetado.`, level: peakSI > 1.3 ? 'warning' : 'neutral' };
+      } else {
+        const q3Sign = q3Bal >= 0 ? '+' : '-';
+        p2 = { text: `Sazonalidade estável. Próximo trimestre projetado: ${q3Sign}${fmt(q3Bal)} (média ${fmt(Math.abs(q3Bal) / 3)}/mês).`, level: q3Bal >= 0 ? 'success' : 'error' };
+      }
+    } else {
+      p2 = { text: `${n} meses de histórico. Com 6+ meses, sazonalidade e projeção trimestral ficam precisas.`, level: 'neutral' };
+    }
+
+    // P3 — Longo prazo (Monte Carlo 12 meses)
+    const p3 = {
+      text: `12 meses (1.000 simulações): base ${p50 >= 0 ? '+' : ''}${fmt(p50)} · otimista ${p10 >= 0 ? '+' : '-'}${fmt(p10)} · pessimista ${p90 >= 0 ? '+' : '-'}${fmt(p90)}.`,
+      level: p50 >= 0 ? 'primary' : 'error'
+    };
+
+    return { p1, p2, p3, hasSeasonality: n >= 6 };
+  }, [monthlyHistory, selectedMonth]);
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
@@ -1199,6 +1332,44 @@ export default function Dashboard({ user }) {
                 );
               })()}
 
+              {/* Previsões preditivas */}
+              {predictions && (() => {
+                const colorMap = {
+                  success: { dot: '#4ade80', bg: 'rgba(74,222,128,0.06)', border: 'rgba(74,222,128,0.2)' },
+                  error:   { dot: '#f87171', bg: 'rgba(248,113,113,0.06)', border: 'rgba(248,113,113,0.2)' },
+                  warning: { dot: '#facc15', bg: 'rgba(250,204,21,0.06)',  border: 'rgba(250,204,21,0.2)'  },
+                  primary: { dot: '#818cf8', bg: 'rgba(129,140,248,0.06)', border: 'rgba(129,140,248,0.2)' },
+                  neutral: { dot: '#64748b', bg: 'rgba(100,116,139,0.06)', border: 'rgba(100,116,139,0.2)' },
+                };
+                const items = [
+                  { label: 'Curto prazo',  horizon: '1–3 meses',   ...predictions.p1 },
+                  { label: 'Médio prazo',  horizon: '3–6 meses',   ...predictions.p2 },
+                  { label: 'Longo prazo',  horizon: '12 meses',    ...predictions.p3 },
+                ];
+                return (
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 mb-2 flex items-center gap-1.5">
+                      <Zap size={9} /> Projeções — Holt · Sazonalidade · Monte Carlo
+                    </p>
+                    {items.map((item, i) => {
+                      const c = colorMap[item.level] || colorMap.neutral;
+                      return (
+                        <div key={i} className="flex items-start gap-2.5 px-3 py-2 rounded-xl border" style={{ background: c.bg, borderColor: c.border }}>
+                          <div className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: c.dot }} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: c.dot }}>{item.label}</span>
+                              <span className="text-[8px] text-white/20">{item.horizon}</span>
+                            </div>
+                            <p className="text-[10px] text-white/70 leading-snug">{item.text}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
               {/* Sub-cards: Entradas / Saídas / Cofrinho */}
               <div className="grid grid-cols-3 gap-3">
 
@@ -1293,65 +1464,61 @@ export default function Dashboard({ user }) {
             {/* Divider */}
             <div className="w-full h-[1px] bg-white/10 my-3"></div>
 
-            {/* AI Insights - Premium Reference Style */}
+            {/* Resumo */}
             <div className="mt-2">
               <h3 className="text-xs font-black text-nubank-light flex items-center gap-2 mb-4 uppercase tracking-[0.2em]">
-                <Sparkles size={14} /> Extrato AI Insights
+                <Sparkles size={14} /> Resumo
               </h3>
               <div className="space-y-3">
                 {(() => {
-                  const insights = [];
-                  const { income, expense, savingsOut, savingsIn } = aggregates;
+                  const items = [];
+                  const { income, expense } = aggregates;
 
-                  // Insight 1: Spending vs Income
+                  // 1. Este mês
+                  const topCat = topCategories[0]?.[0];
+                  const topCatPct = income > 0 && topCategories[0]?.[1]
+                    ? ((topCategories[0][1] / income) * 100).toFixed(0)
+                    : null;
                   if (expense > income && income > 0) {
-                    insights.push({
-                      icon: AlertTriangle,
-                      color: 'border-l-error bg-error/5',
-                      textColor: 'text-error',
-                      text: `Seus gastos (R$ ${expense.toLocaleString('pt-BR')}) superaram as entradas este mês.`
-                    });
+                    items.push({ icon: AlertTriangle, level: 'error',
+                      text: `Este mês: gastos superaram a renda em R$ ${(expense - income).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}. Principal categoria: ${topCat || '—'}.` });
                   } else if (income > 0) {
-                    insights.push({
-                      icon: Shield,
-                      color: 'border-l-success bg-success/5',
-                      textColor: 'text-success',
-                      text: `Saúde financeira estável. Você utilizou ${( (expense/income)*100 ).toFixed(0)}% da sua renda este mês.`
-                    });
+                    items.push({ icon: Shield, level: 'success',
+                      text: `Este mês: ${((expense / income) * 100).toFixed(0)}% da renda comprometida. ${topCat ? `Maior gasto: ${topCat}${topCatPct ? ` (${topCatPct}% da renda)` : ''}.` : ''}` });
                   }
 
-                  // Insight 2: Savings
-                  if (savingsOut > 0) {
-                    insights.push({
-                      icon: Zap,
-                      color: 'border-l-primary bg-primary/5',
-                      textColor: 'text-primary',
-                      text: `Você aplicou R$ ${savingsOut.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em investimentos${savingsIn > 0 ? ` e resgatou R$ ${savingsIn.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''} este mês.`
-                    });
+                  // 2. Trimestre
+                  if (comparativeData?.quarter) {
+                    const { changes, curr } = comparativeData.quarter;
+                    const expDelta = changes.expense;
+                    const trend = expDelta > 5 ? 'subiram' : expDelta < -5 ? 'caíram' : 'estáveis';
+                    const trendLevel = expDelta > 10 ? 'error' : expDelta > 5 ? 'warning' : 'success';
+                    items.push({ icon: TrendingUp, level: trendLevel,
+                      text: `Trimestre: despesas ${trend} ${Math.abs(expDelta).toFixed(0)}% vs trimestre anterior. Saldo acumulado: R$ ${curr.balance.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}.` });
                   }
 
-                  // Insight 3: Top Category
-                  if (topCategories.length > 0) {
-                    insights.push({
-                      icon: Lightbulb,
-                      color: 'border-l-primary bg-primary/5',
-                      textColor: 'text-primary',
-                      text: `O maior peso no seu orçamento este mês foi '${topCategories[0][0]}'.`
-                    });
+                  // 3. Ano
+                  if (comparativeData?.year) {
+                    const { changes, curr } = comparativeData.year;
+                    const savingsRate = curr.income > 0 ? ((curr.savingsOut / curr.income) * 100).toFixed(1) : '0';
+                    const yoyExp = changes.expense;
+                    items.push({ icon: Activity, level: yoyExp > changes.income ? 'warning' : 'primary',
+                      text: `Ano: gastos ${yoyExp > 0 ? '+' : ''}${yoyExp.toFixed(0)}% vs ano anterior${changes.income !== 0 ? `, renda ${changes.income > 0 ? '+' : ''}${changes.income.toFixed(0)}%` : ''}. Taxa de poupança: ${savingsRate}% da renda.` });
                   }
 
-                  return insights.map((ins, i) => {
+                  return items.map((ins, i) => {
                     const Icon = ins.icon;
+                    const colorMap = {
+                      success: 'border-l-success bg-success/5 text-success',
+                      error:   'border-l-error bg-error/5 text-error',
+                      warning: 'border-l-yellow-500 bg-yellow-500/5 text-yellow-400',
+                      primary: 'border-l-primary bg-primary/5 text-primary',
+                    };
+                    const cls = colorMap[ins.level] || colorMap.primary;
                     return (
-                      <motion.div 
-                        key={i} 
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className={`flex items-center gap-3 p-3.5 rounded-2xl border-l-[3px] bg-white/[0.03] transition-all hover:bg-white/[0.05] shadow-sm ${ins.color}`}
-                      >
-                        <div className={`p-1.5 rounded-lg ${ins.color} opacity-80 shadow-inner`}>
-                          <Icon size={14} />
-                        </div>
+                      <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                        className={`flex items-center gap-3 p-3.5 rounded-2xl border-l-[3px] bg-white/[0.03] transition-all hover:bg-white/[0.05] shadow-sm ${cls}`}>
+                        <div className={`p-1.5 rounded-lg opacity-80 ${cls}`}><Icon size={14} /></div>
                         <p className="text-[11px] font-bold leading-snug text-white/90">{ins.text}</p>
                       </motion.div>
                     );
