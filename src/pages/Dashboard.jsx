@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   PieChart, Pie, Cell, Sector, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, AreaChart, Area
@@ -537,6 +537,8 @@ export default function Dashboard({ user }) {
   const [loading, setLoading] = useState(false);
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
   const [effectiveUserId, setEffectiveUserId] = useState(null);
+  const categoryChartRef = useRef(null);
+  const transactionsRef = useRef(null);
   const navigate = useNavigate();
 
   const [selectedMonth, setSelectedMonth] = useState('');
@@ -1136,66 +1138,126 @@ export default function Dashboard({ user }) {
         >
           
           {/* Main Balance Card (Bento Large) */}
-          <motion.div variants={itemVariants} className="md:col-span-8 glass-card p-10 rounded-[2.5rem] relative overflow-hidden group">
-            <div className="relative z-10 flex flex-col h-full justify-between">
-              <div>
-                <div className={`flex items-center gap-2 mb-2 font-bold tracking-[0.2em] text-[10px] uppercase ${aggregates.patrimonioErosion ? 'text-error' : 'text-primary'}`}>
+          <motion.div variants={itemVariants} className="md:col-span-8 glass-card p-8 rounded-[2.5rem] relative overflow-hidden group">
+            <div className="relative z-10 flex flex-col gap-6">
+
+              {/* Header: label + period + erosion badge */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className={`flex items-center gap-2 font-bold tracking-[0.2em] text-[10px] uppercase ${aggregates.patrimonioErosion ? 'text-error' : 'text-primary'}`}>
                   <Activity size={12} /> Saldo Líquido do Mês
+                </div>
+                <div className="flex items-center gap-2">
                   {aggregates.patrimonioErosion && (
-                    <span className="ml-1 flex items-center gap-1 bg-error/15 border border-error/30 text-error px-2 py-0.5 rounded-full text-[9px] font-black tracking-normal normal-case">
+                    <span className="flex items-center gap-1 bg-error/15 border border-error/30 text-error px-2 py-0.5 rounded-full text-[9px] font-black">
                       ⚠ Erosão de patrimônio
                     </span>
                   )}
-                </div>
-                <div className={`text-[4rem] md:text-[5rem] leading-none font-black tracking-tighter text-glow ${aggregates.patrimonioErosion ? 'text-error' : 'text-white'}`}>
-                  {maskBRL(aggregates.balance, hideValues)}
+                  <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
+                    {selectedMonth ? new Date(selectedMonth + '-02').toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '—'}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-12 flex-wrap">
-                <div className="flex-1 min-w-[120px] glass p-5 rounded-3xl border-l-4" style={{ borderLeftColor: '#10b981' }}>
-                  <div className="flex items-center gap-2 text-success font-bold text-[10px] uppercase mb-1">
-                    <ArrowUpRight size={12} /> Entradas
+              {/* Big number */}
+              <div className={`text-[4rem] md:text-[5rem] leading-none font-black tracking-tighter text-glow ${
+                aggregates.patrimonioErosion ? 'text-error'
+                : aggregates.balance >= 0    ? 'text-success'
+                : 'text-error'
+              }`}>
+                {maskBRL(aggregates.balance, hideValues)}
+              </div>
+
+              {/* Expense ratio bar */}
+              {aggregates.income > 0 && (() => {
+                const pct = Math.min(100, Math.round((aggregates.expense / aggregates.income) * 100));
+                const barColor = pct <= 60 ? '#4ade80' : pct <= 85 ? '#facc15' : '#f87171';
+                return (
+                  <div>
+                    <div className="flex justify-between text-[9px] font-bold text-white/30 mb-1.5 uppercase tracking-widest">
+                      <span>Comprometimento da renda</span>
+                      <span style={{ color: barColor }}>{pct}%</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%`, background: barColor }}
+                      />
+                    </div>
                   </div>
-                  <p className="text-xl font-black text-white">{maskBRL(aggregates.income, hideValues)}</p>
-                </div>
-                <div className="flex-1 min-w-[120px] glass p-5 rounded-3xl border-l-4" style={{ borderLeftColor: '#ef4444' }}>
-                  <div className="flex items-center gap-2 text-error font-bold text-[10px] uppercase mb-1">
-                    <ArrowDownRight size={12} /> Saídas
+                );
+              })()}
+
+              {/* Sub-cards: Entradas / Saídas / Cofrinho */}
+              <div className="grid grid-cols-3 gap-3">
+
+                {/* Entradas */}
+                <button
+                  onClick={() => {
+                    setTypeFilter('receitas');
+                    setCategoryFilter([]);
+                    setTimeout(() => transactionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                  }}
+                  className="group/card text-left glass p-4 rounded-2xl border border-transparent hover:border-success/40 hover:bg-success/5 active:scale-95 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5 text-success font-bold text-[9px] uppercase tracking-widest mb-2">
+                    <ArrowUpRight size={11} /> Entradas
                   </div>
-                  <p className="text-xl font-black text-white">{maskBRL(aggregates.expense, hideValues)}</p>
-                </div>
-                <div className="flex-1 min-w-[140px] glass p-5 rounded-3xl border-l-4" style={{ borderLeftColor: '#00d2ff' }}>
-                  <div className="flex items-center gap-2 font-bold text-[10px] uppercase mb-2" style={{ color: '#00d2ff' }}>
-                    <PiggyBank size={12} /> Cofrinho
+                  <p className="text-lg font-black text-white leading-none">{maskBRL(aggregates.income, hideValues)}</p>
+                  <p className="text-[8px] text-white/20 mt-1 font-medium">ver transações →</p>
+                </button>
+
+                {/* Saídas */}
+                <button
+                  onClick={() => {
+                    setTypeFilter('despesas');
+                    setCategoryFilter([]);
+                    setTimeout(() => categoryChartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                  }}
+                  className="group/card text-left glass p-4 rounded-2xl border border-transparent hover:border-error/40 hover:bg-error/5 active:scale-95 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5 text-error font-bold text-[9px] uppercase tracking-widest mb-2">
+                    <ArrowDownRight size={11} /> Saídas
                   </div>
-                  <div className="flex items-center gap-1 mb-1">
-                    <ArrowUpRight size={10} style={{ color: '#f87171' }} />
-                    <span className="text-[9px] font-bold" style={{ color: '#f8717199' }}>Resgates</span>
-                    <span className="text-xs font-black text-white ml-auto">{maskBRL(aggregates.savingsIn, hideValues)}</span>
+                  <p className="text-lg font-black text-white leading-none">{maskBRL(aggregates.expense, hideValues)}</p>
+                  <p className="text-[8px] text-white/20 mt-1 font-medium">ver por categoria →</p>
+                </button>
+
+                {/* Cofrinho */}
+                <button
+                  onClick={() => {
+                    setTypeFilter('investimentos');
+                    setCategoryFilter([]);
+                    setTimeout(() => transactionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                  }}
+                  className="group/card text-left glass p-4 rounded-2xl border border-transparent hover:border-cyan-400/40 hover:bg-cyan-400/5 active:scale-95 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-[9px] uppercase tracking-widest mb-2" style={{ color: '#00d2ff' }}>
+                    <PiggyBank size={11} /> Cofrinho
                   </div>
-                  <div className="flex items-center gap-1 mb-2">
-                    <ArrowDownRight size={10} style={{ color: '#4ade80' }} />
-                    <span className="text-[9px] font-bold" style={{ color: '#4ade8099' }}>Aplicações</span>
-                    <span className="text-xs font-black text-white ml-auto">{maskBRL(aggregates.savingsOut, hideValues)}</span>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[8px] font-bold" style={{ color: '#f8717180' }}>Resgates</span>
+                    <span className="text-xs font-black text-white">{maskBRL(aggregates.savingsIn, hideValues)}</span>
                   </div>
-                  <div className="border-t border-white/10 pt-2">
-                    <p className="text-[9px] font-bold mb-1" style={{ color: '#00d2ff99' }}>Saldo Líquido</p>
-                    <p className="text-base font-black" style={{
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[8px] font-bold" style={{ color: '#4ade8080' }}>Aplicações</span>
+                    <span className="text-xs font-black text-white">{maskBRL(aggregates.savingsOut, hideValues)}</span>
+                  </div>
+                  <div className="border-t border-white/10 pt-1.5 flex items-center justify-between">
+                    <span className="text-[8px] font-bold" style={{ color: '#00d2ff80' }}>Saldo</span>
+                    <span className="text-sm font-black" style={{
                       color: aggregates.patrimonioErosion ? '#f87171'
                            : aggregates.savingsNet >= 0   ? '#4ade80'
                            : '#f87171'
                     }}>
                       {maskBRL(Math.abs(aggregates.savingsNet), hideValues)}
-                      <span className="text-[9px] ml-1">{aggregates.savingsNet >= 0 ? '▲' : '▼'}</span>
-                    </p>
-                    {aggregates.patrimonioErosion && (
-                      <p className="text-[8px] text-error/70 font-bold mt-0.5 leading-tight">
-                        Resgate cobriu déficit mensal
-                      </p>
-                    )}
+                      <span className="text-[8px] ml-0.5">{aggregates.savingsNet >= 0 ? '▲' : '▼'}</span>
+                    </span>
                   </div>
-                </div>
+                  {aggregates.patrimonioErosion && (
+                    <p className="text-[7px] text-error/60 font-bold mt-1 leading-tight">Resgate cobriu déficit</p>
+                  )}
+                </button>
+
               </div>
             </div>
             {/* Background Accent */}
@@ -1375,7 +1437,7 @@ export default function Dashboard({ user }) {
         >
           
           {/* Charts Card */}
-          <motion.div variants={itemVariants} className="lg:col-span-7">
+          <motion.div ref={categoryChartRef} variants={itemVariants} className="lg:col-span-7">
             <CategoryChart
               chartData={chartData}
               selectedCategories={categoryFilter}
@@ -1389,7 +1451,7 @@ export default function Dashboard({ user }) {
           </motion.div>
 
           {/* Transactions List with Search + Filter */}
-          <motion.div variants={itemVariants} className="lg:col-span-5 glass-card p-8 rounded-[2.5rem] flex flex-col">
+          <motion.div ref={transactionsRef} variants={itemVariants} className="lg:col-span-5 glass-card p-8 rounded-[2.5rem] flex flex-col">
             {/* Header: Title + Search + Filter toggle */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
               <h3 className="font-black text-xl text-white">Transações</h3>
@@ -1555,6 +1617,7 @@ export default function Dashboard({ user }) {
                     const cls = classifyTransaction(item);
                     if (typeFilter === 'receitas' && cls !== 'income') return false;
                     if (typeFilter === 'despesas' && cls !== 'expense') return false;
+                    if (typeFilter === 'investimentos' && cls !== 'savings_in' && cls !== 'savings_out') return false;
                     const abs = Math.abs(item.amount);
                     if (minAmount !== '' && !isNaN(parseFloat(minAmount)) && abs < parseFloat(minAmount)) return false;
                     if (maxAmount !== '' && !isNaN(parseFloat(maxAmount)) && abs > parseFloat(maxAmount)) return false;
