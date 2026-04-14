@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useApp } from '../contexts/AppContext.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Check, Zap, Shield, Star, ArrowLeft, Lock,
@@ -252,6 +253,7 @@ function PlanCard({ plan, annual, index }) {
 export default function Pricing() {
   const [annual, setAnnual] = useState(false);
   const navigate = useNavigate();
+  const { user } = useApp();
 
   return (
     <div className="min-h-screen text-white overflow-hidden" style={{
@@ -265,13 +267,13 @@ export default function Pricing() {
       {/* Voltar */}
       <div className="max-w-6xl mx-auto px-6 pt-8">
         <button
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate(user ? '/dashboard' : '/')}
           className="flex items-center gap-2 text-[13px] font-medium transition-colors mb-14"
           style={{ color: 'rgba(255,255,255,0.35)' }}
           onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
           onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}
         >
-          <ArrowLeft size={15} /> Voltar ao Dashboard
+          <ArrowLeft size={15} /> {user ? 'Voltar ao Dashboard' : 'Voltar à Home'}
         </button>
 
         {/* Hero */}
