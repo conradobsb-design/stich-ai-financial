@@ -1653,15 +1653,20 @@ export default function Dashboard({ user }) {
                     const isPos = item.amount > 0;
                     const cat = smartCategory(item);
 
-                    const styles = {
-                      savings_out: { bg: 'bg-cyan-500/10', iconBg: 'text-cyan-400', icon: <PiggyBank size={18} />, color: 'text-cyan-400', border: 'border-cyan-500/20' },
-                      savings_in:  { bg: 'bg-cyan-500/10', iconBg: 'text-cyan-400', icon: <PiggyBank size={18} />, color: 'text-cyan-400', border: 'border-cyan-500/20' },
-                      income:      { bg: 'bg-success/10',  iconBg: 'text-success',   icon: <ArrowUpRight size={18} />, color: 'text-success', border: 'border-success/20' },
-                      expense:     { bg: 'bg-white/[0.03]', iconBg: 'text-primary',  icon: <TrendingDown size={18} />, color: 'text-error',   border: 'border-white/5' },
-                    }[cls] || { bg: 'bg-white/[0.03]', iconBg: 'text-primary', icon: <TrendingDown size={18} />, color: 'text-error', border: 'border-white/5' };
-
                     const catColor = CATEGORY_COLORS[cat] || '#94a3b8';
                     const bank = item.bank || (item.metadata?.banco) || null;
+
+                    const styles = {
+                      savings_out: { icon: <PiggyBank size={18} />, amountColor: 'text-cyan-400' },
+                      savings_in:  { icon: <PiggyBank size={18} />, amountColor: 'text-cyan-400' },
+                      income:      { icon: <ArrowUpRight size={18} />, amountColor: 'text-success' },
+                      expense:     { icon: <TrendingDown size={18} />, amountColor: 'text-error' },
+                    }[cls] || { icon: <TrendingDown size={18} />, amountColor: 'text-error' };
+
+                    // Despesas usam cor da categoria; entradas/investimentos mantêm cor semântica
+                    const iconColor   = cls === 'expense' ? catColor : cls === 'income' ? '#4ade80' : '#22d3ee';
+                    const borderColor = cls === 'expense' ? `${catColor}25` : cls === 'income' ? 'rgba(74,222,128,0.15)' : 'rgba(34,211,238,0.15)';
+                    const bgColor     = cls === 'expense' ? `${catColor}08` : cls === 'income' ? 'rgba(74,222,128,0.06)' : 'rgba(34,211,238,0.06)';
 
                     return (
                       <motion.div
@@ -1670,10 +1675,11 @@ export default function Dashboard({ user }) {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         layout
-                        className={`group flex items-start gap-3 p-4 rounded-2xl transition-all border ${styles.border} ${styles.bg} hover:bg-white/[0.07] hover:border-white/15`}
+                        className="group flex items-start gap-3 p-4 rounded-2xl transition-all border hover:brightness-110"
+                        style={{ background: bgColor, borderColor }}
                       >
                         {/* Ícone */}
-                        <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 bg-white/5 ${styles.iconBg}`}>
+                        <div className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: `${iconColor}18`, color: iconColor }}>
                           {styles.icon}
                         </div>
 
@@ -1701,7 +1707,7 @@ export default function Dashboard({ user }) {
 
                         {/* Valor + data */}
                         <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
-                          <p className={`font-black text-sm whitespace-nowrap ${styles.color}`}>
+                          <p className={`font-black text-sm whitespace-nowrap ${styles.amountColor}`}>
                             {hideValues ? 'R$ •••••' : `${isPos ? '+' : '−'} R$ ${Math.abs(item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                           </p>
                           <p className="text-[10px] font-medium text-white/40">
