@@ -336,11 +336,11 @@ const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories
                 <span className="text-[9px] font-bold text-white/40 truncate group-hover/info:text-white/70 transition-colors">{label}</span>
                 <Info size={8} className="shrink-0 text-white/20 group-hover/info:text-white/60 transition-colors" />
                 <div className="pointer-events-none absolute bottom-full left-0 mb-2 z-50 w-60 opacity-0 group-hover/info:opacity-100 transition-opacity duration-200">
-                  <div className="bg-surface-container border border-white/15 rounded-xl px-3 py-2 shadow-xl">
-                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">{label}</p>
-                    <p className="text-[11px] text-white/80 leading-relaxed">{tip}</p>
+                  <div className="rounded-xl px-3 py-2 shadow-xl" style={{ background: '#1e2433', border: '1px solid rgba(255,255,255,0.12)' }}>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.5)' }}>{label}</p>
+                    <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.85)' }}>{tip}</p>
                   </div>
-                  <div className="w-2 h-2 bg-surface-container border-b border-r border-white/15 rotate-45 ml-4 -mt-1" />
+                  <div className="w-2 h-2 rotate-45 ml-4 -mt-1" style={{ background: '#1e2433', borderBottom: '1px solid rgba(255,255,255,0.12)', borderRight: '1px solid rgba(255,255,255,0.12)' }} />
                 </div>
               </div>
               <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
@@ -1605,11 +1605,11 @@ export default function Dashboard({ user }) {
                               onMouseLeave={e => e.currentTarget.style.color = `${accent.color}60`}
                             />
                             <div className="pointer-events-none absolute bottom-full right-0 mb-2 z-50 w-64 opacity-0 group-hover/ptip:opacity-100 transition-opacity duration-200">
-                              <div className="bg-surface-container border border-white/15 rounded-xl px-3 py-2.5 shadow-xl">
+                              <div className="rounded-xl px-3 py-2.5 shadow-xl" style={{ background: '#1e2433', border: '1px solid rgba(255,255,255,0.12)' }}>
                                 <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: accent.color }}>{item.label}</p>
-                                <p className="text-[11px] text-white/75 leading-relaxed">{tip}</p>
+                                <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.85)' }}>{tip}</p>
                               </div>
-                              <div className="w-2 h-2 bg-surface-container border-b border-r border-white/15 rotate-45 ml-auto mr-1 -mt-1" />
+                              <div className="w-2 h-2 rotate-45 ml-auto mr-1 -mt-1" style={{ background: '#1e2433', borderBottom: '1px solid rgba(255,255,255,0.12)', borderRight: '1px solid rgba(255,255,255,0.12)' }} />
                             </div>
                           </div>
                         </div>
