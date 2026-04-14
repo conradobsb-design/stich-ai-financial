@@ -563,6 +563,8 @@ export default function Dashboard({ user }) {
   const [categoryFilter, setCategoryFilter] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
   const [showFileBadges, setShowFileBadges] = useState(true);
+  const [prophetPredictions, setProphetPredictions] = useState(null);
+  const [prophetLoading, setProphetLoading] = useState(false);
   const [showSoraya, setShowSoraya] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [newSuggestion, setNewSuggestion] = useState('');
@@ -1147,6 +1149,47 @@ export default function Dashboard({ user }) {
     return { p1, p2, p3, hasSeasonality: n >= 6 };
   }, [monthlyHistory, selectedMonth]);
 
+  // === PROPHET API CALL ===
+  useEffect(() => {
+    const PROPHET_URL = import.meta.env.VITE_PROPHET_URL;
+    if (!PROPHET_URL || monthlyHistory.length < 3) return;
+
+    const controller = new AbortController();
+
+    const callProphet = async () => {
+      setProphetLoading(true);
+      try {
+        const toSeries = (field) =>
+          monthlyHistory.map(m => ({ ds: `${m.month}-01`, y: m[field] }));
+
+        const res = await fetch(`${PROPHET_URL}/predict`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            expense_series: toSeries('expense'),
+            income_series:  toSeries('income'),
+            horizon: 12,
+          }),
+          signal: controller.signal,
+        });
+
+        if (!res.ok) throw new Error(`Prophet service: ${res.status}`);
+        const data = await res.json();
+        setProphetPredictions(data);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.warn('Prophet service unavailable, using local models.', err.message);
+          setProphetPredictions(null);
+        }
+      } finally {
+        setProphetLoading(false);
+      }
+    };
+
+    callProphet();
+    return () => controller.abort();
+  }, [monthlyHistory]);
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
@@ -1332,29 +1375,73 @@ export default function Dashboard({ user }) {
                 );
               })()}
 
-              {/* Previsões preditivas */}
-              {predictions && (() => {
+              {/* Previsões preditivas — Prophet (preferencial) ou modelos locais */}
+              {(prophetPredictions || predictions) && (() => {
+                const fmt = (v) => `R$ ${Math.abs(v).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
+                const sign = (v) => v >= 0 ? '+' : '−';
+
+                // Fonte: Prophet se disponível, senão modelos locais
+                const usingProphet = !!prophetPredictions;
+                const source = usingProphet
+                  ? 'Prophet · Meta AI · feriados BR'
+                  : 'Holt · Sazonalidade · Monte Carlo';
+
+                let items;
+
+                if (usingProphet) {
+                  const { balance } = prophetPredictions;
+                  const levels = [
+                    { data: balance.short,  label: 'Curto prazo',  horizon: balance.short.label },
+                    { data: balance.medium, label: 'Médio prazo',  horizon: balance.medium.label },
+                    { data: balance.long,   label: 'Longo prazo',  horizon: '12 meses' },
+                  ];
+                  items = levels.map(({ data, label, horizon }) => {
+                    const level = data.base >= 0 ? 'success' : 'error';
+                    const text = `Saldo projetado: ${sign(data.base)}${fmt(data.base)} `
+                      + `(conservador ${sign(data.low)}${fmt(data.low)} · `
+                      + `otimista ${sign(data.high)}${fmt(data.high)}).`;
+                    return { label, horizon, text, level };
+                  });
+                } else {
+                  items = [
+                    { label: 'Curto prazo',  horizon: '1–3 meses', ...predictions.p1 },
+                    { label: 'Médio prazo',  horizon: '3–6 meses', ...predictions.p2 },
+                    { label: 'Longo prazo',  horizon: '12 meses',  ...predictions.p3 },
+                  ];
+                }
+
                 const colorMap = {
-                  success: { dot: '#4ade80', bg: 'rgba(74,222,128,0.06)', border: 'rgba(74,222,128,0.2)' },
+                  success: { dot: '#4ade80', bg: 'rgba(74,222,128,0.06)',  border: 'rgba(74,222,128,0.2)'  },
                   error:   { dot: '#f87171', bg: 'rgba(248,113,113,0.06)', border: 'rgba(248,113,113,0.2)' },
                   warning: { dot: '#facc15', bg: 'rgba(250,204,21,0.06)',  border: 'rgba(250,204,21,0.2)'  },
                   primary: { dot: '#818cf8', bg: 'rgba(129,140,248,0.06)', border: 'rgba(129,140,248,0.2)' },
                   neutral: { dot: '#64748b', bg: 'rgba(100,116,139,0.06)', border: 'rgba(100,116,139,0.2)' },
                 };
-                const items = [
-                  { label: 'Curto prazo',  horizon: '1–3 meses',   ...predictions.p1 },
-                  { label: 'Médio prazo',  horizon: '3–6 meses',   ...predictions.p2 },
-                  { label: 'Longo prazo',  horizon: '12 meses',    ...predictions.p3 },
-                ];
+
                 return (
                   <div className="space-y-2">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 mb-2 flex items-center gap-1.5">
-                      <Zap size={9} /> Projeções — Holt · Sazonalidade · Monte Carlo
-                    </p>
-                    {items.map((item, i) => {
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 flex items-center gap-1.5">
+                        <Zap size={9} /> Projeções
+                      </p>
+                      <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full border ${
+                        usingProphet
+                          ? 'text-violet-400 border-violet-400/30 bg-violet-400/10'
+                          : 'text-white/20 border-white/10 bg-transparent'
+                      }`}>
+                        {prophetLoading ? '⟳ calculando...' : source}
+                      </span>
+                    </div>
+
+                    {prophetLoading ? (
+                      <div className="flex items-center gap-2 px-3 py-3 rounded-xl bg-white/5 border border-white/10">
+                        <div className="w-3 h-3 rounded-full border-2 border-violet-400/30 border-t-violet-400 animate-spin" />
+                        <p className="text-[10px] text-white/40">Prophet calculando projeções...</p>
+                      </div>
+                    ) : items.map((item, i) => {
                       const c = colorMap[item.level] || colorMap.neutral;
                       return (
-                        <div key={i} className="flex items-start gap-2.5 px-3 py-2 rounded-xl border" style={{ background: c.bg, borderColor: c.border }}>
+                        <div key={i} className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl border" style={{ background: c.bg, borderColor: c.border }}>
                           <div className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: c.dot }} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 mb-0.5">
