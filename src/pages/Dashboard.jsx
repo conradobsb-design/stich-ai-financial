@@ -1375,6 +1375,79 @@ export default function Dashboard({ user }) {
                 );
               })()}
 
+              {/* Sub-cards: Entradas / Saídas / Cofrinho */}
+              <div className="grid grid-cols-3 gap-3">
+
+                {/* Entradas */}
+                <button
+                  onClick={() => {
+                    setTypeFilter('receitas');
+                    setCategoryFilter([]);
+                    setTimeout(() => transactionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                  }}
+                  className="group/card text-left glass p-4 rounded-2xl border border-transparent hover:border-success/40 hover:bg-success/5 active:scale-95 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5 text-success font-bold text-[9px] uppercase tracking-widest mb-2">
+                    <ArrowUpRight size={11} /> Entradas
+                  </div>
+                  <p className="text-lg font-black text-white leading-none">{maskBRL(aggregates.income, hideValues)}</p>
+                  <p className="text-[8px] text-white/20 mt-1 font-medium">ver transações →</p>
+                </button>
+
+                {/* Saídas */}
+                <button
+                  onClick={() => {
+                    setTypeFilter('despesas');
+                    setCategoryFilter([]);
+                    setTimeout(() => categoryChartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                  }}
+                  className="group/card text-left glass p-4 rounded-2xl border border-transparent hover:border-error/40 hover:bg-error/5 active:scale-95 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5 text-error font-bold text-[9px] uppercase tracking-widest mb-2">
+                    <ArrowDownRight size={11} /> Saídas
+                  </div>
+                  <p className="text-lg font-black text-white leading-none">{maskBRL(aggregates.expense, hideValues)}</p>
+                  <p className="text-[8px] text-white/20 mt-1 font-medium">ver por categoria →</p>
+                </button>
+
+                {/* Cofrinho */}
+                <button
+                  onClick={() => {
+                    setTypeFilter('investimentos');
+                    setCategoryFilter([]);
+                    setTimeout(() => transactionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                  }}
+                  className="group/card text-left glass p-4 rounded-2xl border border-transparent hover:border-cyan-400/40 hover:bg-cyan-400/5 active:scale-95 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-[9px] uppercase tracking-widest mb-2" style={{ color: '#00d2ff' }}>
+                    <PiggyBank size={11} /> Cofrinho
+                  </div>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[8px] font-bold" style={{ color: '#f8717180' }}>Resgates</span>
+                    <span className="text-xs font-black text-white">{maskBRL(aggregates.savingsIn, hideValues)}</span>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[8px] font-bold" style={{ color: '#4ade8080' }}>Aplicações</span>
+                    <span className="text-xs font-black text-white">{maskBRL(aggregates.savingsOut, hideValues)}</span>
+                  </div>
+                  <div className="border-t border-white/10 pt-1.5 flex items-center justify-between">
+                    <span className="text-[8px] font-bold" style={{ color: '#00d2ff80' }}>Saldo</span>
+                    <span className="text-sm font-black" style={{
+                      color: aggregates.patrimonioErosion ? '#f87171'
+                           : aggregates.savingsNet >= 0   ? '#4ade80'
+                           : '#f87171'
+                    }}>
+                      {maskBRL(Math.abs(aggregates.savingsNet), hideValues)}
+                      <span className="text-[8px] ml-0.5">{aggregates.savingsNet >= 0 ? '▲' : '▼'}</span>
+                    </span>
+                  </div>
+                  {aggregates.patrimonioErosion && (
+                    <p className="text-[7px] text-error/60 font-bold mt-1 leading-tight">Resgate cobriu déficit</p>
+                  )}
+                </button>
+
+              </div>
+
               {/* Previsões preditivas — Prophet (preferencial) ou modelos locais */}
               {(prophetPredictions || predictions) && (() => {
                 const fmt = (v) => `R$ ${Math.abs(v).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
@@ -1457,78 +1530,6 @@ export default function Dashboard({ user }) {
                 );
               })()}
 
-              {/* Sub-cards: Entradas / Saídas / Cofrinho */}
-              <div className="grid grid-cols-3 gap-3">
-
-                {/* Entradas */}
-                <button
-                  onClick={() => {
-                    setTypeFilter('receitas');
-                    setCategoryFilter([]);
-                    setTimeout(() => transactionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-                  }}
-                  className="group/card text-left glass p-4 rounded-2xl border border-transparent hover:border-success/40 hover:bg-success/5 active:scale-95 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-1.5 text-success font-bold text-[9px] uppercase tracking-widest mb-2">
-                    <ArrowUpRight size={11} /> Entradas
-                  </div>
-                  <p className="text-lg font-black text-white leading-none">{maskBRL(aggregates.income, hideValues)}</p>
-                  <p className="text-[8px] text-white/20 mt-1 font-medium">ver transações →</p>
-                </button>
-
-                {/* Saídas */}
-                <button
-                  onClick={() => {
-                    setTypeFilter('despesas');
-                    setCategoryFilter([]);
-                    setTimeout(() => categoryChartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-                  }}
-                  className="group/card text-left glass p-4 rounded-2xl border border-transparent hover:border-error/40 hover:bg-error/5 active:scale-95 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-1.5 text-error font-bold text-[9px] uppercase tracking-widest mb-2">
-                    <ArrowDownRight size={11} /> Saídas
-                  </div>
-                  <p className="text-lg font-black text-white leading-none">{maskBRL(aggregates.expense, hideValues)}</p>
-                  <p className="text-[8px] text-white/20 mt-1 font-medium">ver por categoria →</p>
-                </button>
-
-                {/* Cofrinho */}
-                <button
-                  onClick={() => {
-                    setTypeFilter('investimentos');
-                    setCategoryFilter([]);
-                    setTimeout(() => transactionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-                  }}
-                  className="group/card text-left glass p-4 rounded-2xl border border-transparent hover:border-cyan-400/40 hover:bg-cyan-400/5 active:scale-95 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-1.5 font-bold text-[9px] uppercase tracking-widest mb-2" style={{ color: '#00d2ff' }}>
-                    <PiggyBank size={11} /> Cofrinho
-                  </div>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[8px] font-bold" style={{ color: '#f8717180' }}>Resgates</span>
-                    <span className="text-xs font-black text-white">{maskBRL(aggregates.savingsIn, hideValues)}</span>
-                  </div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[8px] font-bold" style={{ color: '#4ade8080' }}>Aplicações</span>
-                    <span className="text-xs font-black text-white">{maskBRL(aggregates.savingsOut, hideValues)}</span>
-                  </div>
-                  <div className="border-t border-white/10 pt-1.5 flex items-center justify-between">
-                    <span className="text-[8px] font-bold" style={{ color: '#00d2ff80' }}>Saldo</span>
-                    <span className="text-sm font-black" style={{
-                      color: aggregates.patrimonioErosion ? '#f87171'
-                           : aggregates.savingsNet >= 0   ? '#4ade80'
-                           : '#f87171'
-                    }}>
-                      {maskBRL(Math.abs(aggregates.savingsNet), hideValues)}
-                      <span className="text-[8px] ml-0.5">{aggregates.savingsNet >= 0 ? '▲' : '▼'}</span>
-                    </span>
-                  </div>
-                  {aggregates.patrimonioErosion && (
-                    <p className="text-[7px] text-error/60 font-bold mt-1 leading-tight">Resgate cobriu déficit</p>
-                  )}
-                </button>
-
-              </div>
             </div>
             {/* Background Accent */}
             <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/10 to-transparent pointer-events-none group-hover:from-primary/20 transition-all"></div>
