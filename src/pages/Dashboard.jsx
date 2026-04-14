@@ -1146,8 +1146,49 @@ export default function Dashboard({ user }) {
       level: p50 >= 0 ? 'primary' : 'error'
     };
 
-    return { p1, p2, p3, hasSeasonality: n >= 6 };
-  }, [monthlyHistory, selectedMonth]);
+    // P4 — Concentração de Risco (HHI)
+    const totalExp = chartData.reduce((s, c) => s + c.value, 0);
+    const hhi = totalExp > 0
+      ? chartData.reduce((s, c) => { const share = c.value / totalExp; return s + share * share; }, 0)
+      : 0;
+    const topCat = chartData[0];
+    const topShare = totalExp > 0 && topCat ? ((topCat.value / totalExp) * 100).toFixed(0) : 0;
+    let p4;
+    if (hhi > 0.35) {
+      p4 = { text: `Risco de concentração elevado (HHI ${hhi.toFixed(2)}): ${topCat?.name} representa ${topShare}% das despesas. Um choque nessa categoria desequilibra o orçamento.`, level: 'error' };
+    } else if (hhi > 0.20) {
+      p4 = { text: `Concentração moderada (HHI ${hhi.toFixed(2)}): ${topCat?.name} lidera com ${topShare}%. Monitorar se superar 40%.`, level: 'warning' };
+    } else if (topCat) {
+      p4 = { text: `Gastos bem distribuídos (HHI ${hhi.toFixed(2)}). ${topCat.name} representa ${topShare}% — baixo risco de concentração setorial.`, level: 'success' };
+    } else {
+      p4 = { text: `Sem dados de categoria suficientes para análise de concentração.`, level: 'neutral' };
+    }
+
+    // P5 — Ponto de Equilíbrio / Reserva de Emergência
+    const avgMonthlyExpense = expenses.reduce((a, b) => a + b, 0) / n;
+    const emergencyFund = avgMonthlyExpense * 6; // padrão CFP®: 6× despesa média
+    const currentBalance = aggregates.balance;
+    let p5;
+    if (currentBalance > 0) {
+      const months = Math.ceil(emergencyFund / currentBalance);
+      p5 = {
+        text: `Reserva de emergência ideal: ${fmt(emergencyFund)} (6× despesa média). Superávit atual de ${fmt(currentBalance)}/mês → atingível em ~${months} mês${months === 1 ? '' : 'es'}.`,
+        level: months <= 12 ? 'success' : 'primary'
+      };
+    } else if (currentBalance < 0) {
+      p5 = {
+        text: `Déficit de ${fmt(currentBalance)}/mês inviabiliza reserva de emergência (meta: ${fmt(emergencyFund)}). Reduzir despesas ou aumentar renda é prioritário.`,
+        level: 'error'
+      };
+    } else {
+      p5 = {
+        text: `Saldo neutro. Reserva de emergência ideal: ${fmt(emergencyFund)} (6× despesa média de ${fmt(avgMonthlyExpense)}/mês).`,
+        level: 'neutral'
+      };
+    }
+
+    return { p1, p2, p3, p4, p5, hasSeasonality: n >= 6 };
+  }, [monthlyHistory, selectedMonth, chartData, aggregates]);
 
   // === PROPHET API CALL ===
   useEffect(() => {
@@ -1468,18 +1509,27 @@ export default function Dashboard({ user }) {
                     { data: balance.medium, label: 'Médio prazo',  horizon: balance.medium.label },
                     { data: balance.long,   label: 'Longo prazo',  horizon: '12 meses' },
                   ];
-                  items = levels.map(({ data, label, horizon }) => {
-                    const level = data.base >= 0 ? 'success' : 'error';
-                    const text = `Saldo projetado: ${sign(data.base)}${fmt(data.base)} `
-                      + `(conservador ${sign(data.low)}${fmt(data.low)} · `
-                      + `otimista ${sign(data.high)}${fmt(data.high)}).`;
-                    return { label, horizon, text, level };
-                  });
+                  items = [
+                    ...levels.map(({ data, label, horizon }) => {
+                      const level = data.base >= 0 ? 'success' : 'error';
+                      const text = `Saldo projetado: ${sign(data.base)}${fmt(data.base)} `
+                        + `(conservador ${sign(data.low)}${fmt(data.low)} · `
+                        + `otimista ${sign(data.high)}${fmt(data.high)}).`;
+                      return { label, horizon, text, level };
+                    }),
+                    // P4 e P5 sempre vêm dos modelos locais (não dependem do Prophet)
+                    ...(predictions ? [
+                      { label: 'Concentração', horizon: 'HHI',        ...predictions.p4 },
+                      { label: 'Equilíbrio',   horizon: 'Reserva 6×', ...predictions.p5 },
+                    ] : []),
+                  ];
                 } else {
                   items = [
-                    { label: 'Curto prazo',  horizon: '1–3 meses', ...predictions.p1 },
-                    { label: 'Médio prazo',  horizon: '3–6 meses', ...predictions.p2 },
-                    { label: 'Longo prazo',  horizon: '12 meses',  ...predictions.p3 },
+                    { label: 'Curto prazo',   horizon: '1–3 meses',  ...predictions.p1 },
+                    { label: 'Médio prazo',   horizon: '3–6 meses',  ...predictions.p2 },
+                    { label: 'Longo prazo',   horizon: '12 meses',   ...predictions.p3 },
+                    { label: 'Concentração',  horizon: 'HHI',        ...predictions.p4 },
+                    { label: 'Equilíbrio',    horizon: 'Reserva 6×', ...predictions.p5 },
                   ];
                 }
 
