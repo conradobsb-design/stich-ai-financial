@@ -740,19 +740,23 @@ export default function Dashboard({ user }) {
     try {
       // Verificação de duplicata: checar se arquivo já foi importado por este usuário
       const uploadUserId = effectiveUserId || user?.id;
-      const { data: alreadyImported } = await supabase
-        .schema(SCHEMA)
-        .from('imported_files')
-        .select('id, imported_at')
-        .eq('user_id', uploadUserId)
-        .eq('file_name', file.name)
-        .maybeSingle();
+      try {
+        const { data: alreadyImported, error: dupError } = await supabase
+          .schema(SCHEMA)
+          .from('imported_files')
+          .select('id, imported_at')
+          .eq('user_id', uploadUserId)
+          .eq('file_name', file.name)
+          .maybeSingle();
 
-      if (alreadyImported) {
-        const date = new Date(alreadyImported.imported_at).toLocaleDateString('pt-BR');
-        alert(`⚠️ "${file.name}" já foi importado em ${date}.\n\nPara reimportar, remova as transações deste arquivo primeiro.`);
-        setLoading(false);
-        return;
+        if (!dupError && alreadyImported) {
+          const date = new Date(alreadyImported.imported_at).toLocaleDateString('pt-BR');
+          alert(`⚠️ "${file.name}" já foi importado em ${date}.\n\nPara reimportar, remova as transações deste arquivo primeiro.`);
+          setLoading(false);
+          return;
+        }
+      } catch (_) {
+        // Se a checagem falhar por qualquer motivo, permite o upload continuar
       }
 
       const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name);
