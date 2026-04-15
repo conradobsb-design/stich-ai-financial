@@ -1490,9 +1490,7 @@ export default function Dashboard({ user }) {
                   <div className="border-t border-white/10 pt-1.5 flex items-center justify-between">
                     <span className="text-[8px] font-bold" style={{ color: '#00d2ff80' }}>Saldo</span>
                     <span className="text-sm font-black" style={{
-                      color: aggregates.patrimonioErosion ? '#f87171'
-                           : aggregates.savingsNet >= 0   ? '#4ade80'
-                           : '#f87171'
+                      color: aggregates.savingsNet >= 0 ? '#4ade80' : '#f87171'
                     }}>
                       {maskBRL(Math.abs(aggregates.savingsNet), hideValues)}
                       <span className="text-[8px] ml-0.5">{aggregates.savingsNet >= 0 ? '▲' : '▼'}</span>
