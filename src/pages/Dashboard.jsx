@@ -553,6 +553,7 @@ export default function Dashboard({ user }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
+  const [toast, setToast] = useState(null); // { message, type: 'error'|'success'|'warn' }
   const [effectiveUserId, setEffectiveUserId] = useState(null);
   const categoryChartRef = useRef(null);
   const transactionsRef = useRef(null);
@@ -751,7 +752,7 @@ export default function Dashboard({ user }) {
 
         if (!dupError && alreadyImported) {
           const date = new Date(alreadyImported.imported_at).toLocaleDateString('pt-BR');
-          alert(`⚠️ "${file.name}" já foi importado em ${date}.\n\nPara reimportar, remova as transações deste arquivo primeiro.`);
+          setToast({ message: `"${file.name}" já foi importado em ${date}. Para reimportar, remova as transações deste arquivo primeiro.`, type: 'warn' });
           setLoading(false);
           return;
         }
@@ -835,7 +836,7 @@ export default function Dashboard({ user }) {
       window.location.reload();
     } catch (error) {
       console.error("Error processing file:", error);
-      alert("Erro ao processar arquivo.");
+      setToast({ message: 'Erro ao processar arquivo. Tente novamente.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -1279,7 +1280,30 @@ export default function Dashboard({ user }) {
 
   return (
     <div className="bg-background text-on-surface min-h-screen pb-32 mesh-bg">
-      
+
+      {/* Toast notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999, maxWidth: 480, width: '90vw',
+          background: toast.type === 'error' ? '#450a0a' : toast.type === 'warn' ? '#422006' : '#052e16',
+          border: `1px solid ${toast.type === 'error' ? '#f87171' : toast.type === 'warn' ? '#fb923c' : '#4ade80'}`,
+          color: toast.type === 'error' ? '#fca5a5' : toast.type === 'warn' ? '#fdba74' : '#86efac',
+          borderRadius: 14, padding: '14px 20px',
+          display: 'flex', alignItems: 'flex-start', gap: 12,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        }}>
+          <span style={{ fontSize: 18, flexShrink: 0 }}>
+            {toast.type === 'error' ? '✕' : toast.type === 'warn' ? '⚠' : '✓'}
+          </span>
+          <span style={{ fontSize: 13, lineHeight: 1.5, flex: 1 }}>{toast.message}</span>
+          <button onClick={() => setToast(null)} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'inherit', opacity: 0.6, fontSize: 16, flexShrink: 0, padding: 0,
+          }}>✕</button>
+        </div>
+      )}
+
       {/* Header Premium */}
       <header className="fixed top-0 w-full z-50 glass border-b border-outline-variant py-4 px-6 flex justify-between items-center transition-all">
         <div className="flex items-center gap-4">
