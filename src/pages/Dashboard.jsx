@@ -93,7 +93,7 @@ function formatDate(dateStr) {
 }
 
 // === CENTRALIZED CLASSIFICATION SYSTEM ===
-const SAVINGS_CATEGORIES = ['Investimentos', 'Poupança', 'Aplicação', 'CDB', 'Tesouro', 'Fundo'];
+const SAVINGS_CATEGORIES = ['Investimentos', 'Poupança', 'Aplicação', 'CDB', 'Tesouro', 'Fundo', 'Rendimentos'];
 
 function classifyTransaction(item) {
   const desc = (item.description || '').toLowerCase();
