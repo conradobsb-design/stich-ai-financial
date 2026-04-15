@@ -742,7 +742,7 @@ export default function Dashboard({ user }) {
       const uploadUserId = effectiveUserId || user?.id;
       try {
         const { data: alreadyImported, error: dupError } = await supabase
-          .schema(SCHEMA)
+          .schema('stich_ai')
           .from('imported_files')
           .select('id, imported_at')
           .eq('user_id', uploadUserId)
@@ -826,7 +826,7 @@ export default function Dashboard({ user }) {
       });
 
       // Registrar arquivo importado para evitar duplicatas futuras
-      await supabase.schema(SCHEMA).from('imported_files').insert({
+      await supabase.schema('stich_ai').from('imported_files').insert({
         user_id: uploadUserId,
         file_name: file.name,
         import_type: importType || 'extrato',
