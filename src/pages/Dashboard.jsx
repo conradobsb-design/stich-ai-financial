@@ -738,6 +738,23 @@ export default function Dashboard({ user }) {
     setLoading(true);
 
     try {
+      // Verificação de duplicata: checar se arquivo já foi importado por este usuário
+      const uploadUserId = effectiveUserId || user?.id;
+      const { data: alreadyImported } = await supabase
+        .schema(SCHEMA)
+        .from('imported_files')
+        .select('id, imported_at')
+        .eq('user_id', uploadUserId)
+        .eq('file_name', file.name)
+        .maybeSingle();
+
+      if (alreadyImported) {
+        const date = new Date(alreadyImported.imported_at).toLocaleDateString('pt-BR');
+        alert(`⚠️ "${file.name}" já foi importado em ${date}.\n\nPara reimportar, remova as transações deste arquivo primeiro.`);
+        setLoading(false);
+        return;
+      }
+
       const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name);
       let extractedText = "";
 
@@ -781,7 +798,7 @@ export default function Dashboard({ user }) {
       const sourceType = importType === 'cartao' ? 'credit_card' : importType === 'investimento' ? 'investment' : 'bank';
       const payload = {
         text_data: extractedText,
-        user_id: effectiveUserId || user.id,
+        user_id: uploadUserId,
         file_name: file.name,
         import_type: importType || 'extrato',
         source_type: sourceType,
@@ -803,6 +820,14 @@ export default function Dashboard({ user }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      // Registrar arquivo importado para evitar duplicatas futuras
+      await supabase.schema(SCHEMA).from('imported_files').insert({
+        user_id: uploadUserId,
+        file_name: file.name,
+        import_type: importType || 'extrato',
+      });
+
       window.location.reload();
     } catch (error) {
       console.error("Error processing file:", error);
