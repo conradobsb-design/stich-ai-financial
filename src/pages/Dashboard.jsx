@@ -879,7 +879,8 @@ export default function Dashboard({ user }) {
           .from('transactions')
           .select('*')
           .eq('user_id', resolvedUserId)
-          .order('transaction_date', { ascending: false });
+          .order('transaction_date', { ascending: false })
+          .limit(5000);
 
         if (error) throw error;
         if (history && history.length > 0) {
