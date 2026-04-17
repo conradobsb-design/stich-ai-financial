@@ -46,6 +46,10 @@ const CATEGORY_COLORS = {
   'Assinaturas':           '#eab308', // amarelo
   'Serviços Financeiros':  '#0ea5e9', // azul-céu
   'Poupança':              '#22d3ee', // ciano-claro
+  'Casa & Utilidades':     '#a78bfa', // violeta-claro
+  'Seguros':               '#fb923c', // laranja-claro
+  'Salário & Receitas':    '#34d399', // esmeralda
+  'Assinaturas & SaaS':    '#fbbf24', // âmbar
   'Outros':                '#94a3b8', // cinza
 };
 
