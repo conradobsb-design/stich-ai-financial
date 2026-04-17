@@ -903,7 +903,6 @@ export default function Dashboard({ user }) {
     try {
       const newMetadata = { ...(item.metadata || {}), modality_override: modality };
       await supabase
-        .schema('stich_ai')
         .from('transactions')
         .update({ category, metadata: newMetadata })
         .eq('id', item.id);
