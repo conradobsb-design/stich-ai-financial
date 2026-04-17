@@ -2262,7 +2262,7 @@ export default function Dashboard({ user }) {
 
                   return visibleItems.map((item, i) => {
                     const cls = classifyTransaction(item);
-                    const isPos = cls === 'savings_out' ? true : cls === 'savings_in' ? false : item.amount > 0;
+                    const isPos = item.amount > 0;
                     const cat = smartCategory(item);
 
                     const catColor = CATEGORY_COLORS[cat] || '#94a3b8';
