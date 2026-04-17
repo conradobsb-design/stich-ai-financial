@@ -73,10 +73,17 @@ const CATEGORY_RULES = [
   { cat: 'Casa & Utilidades',    keywords: ['casas bahia', 'magazine luiza', 'americanas', 'shoptime', 'leroy merlin', 'tramontina', 'tok&stok', 'mobly', 'moveis', 'móveis', 'magic box', 'eletrodomestico', 'eletrodoméstico', 'reforma', 'decoracao', 'decoração', 'materiais construcao', 'flora', 'flores', 'floricultura', 'mega flora', 'chacara', 'chácaras', 'bucalo', 'estok'] },
 ];
 
+// User-specific rules loaded from DB — updated by Dashboard on mount
+let _userCategoryRules = [];
+
 function smartCategory(item) {
+  const desc = (item.description || '').toLowerCase();
+  // User rules take priority over everything
+  for (const rule of _userCategoryRules) {
+    if (desc.includes(rule.keyword.toLowerCase())) return rule.category;
+  }
   const stored = (item.category || '').trim();
   if (stored && stored !== 'Outros' && stored !== 'outros') return stored;
-  const desc = (item.description || '').toLowerCase();
   for (const rule of CATEGORY_RULES) {
     if (rule.keywords.some(k => desc.includes(k))) return rule.cat;
   }
@@ -96,6 +103,9 @@ function formatDate(dateStr) {
 const SAVINGS_CATEGORIES = ['Investimentos', 'Poupança', 'Aplicação', 'CDB', 'Tesouro', 'Fundo', 'Rendimentos'];
 
 function classifyTransaction(item) {
+  // Manual override wins (set when user edits modality)
+  if (item.metadata?.modality_override) return item.metadata.modality_override;
+
   const desc = (item.description || '').toLowerCase();
   const cat = smartCategory(item);
 
@@ -109,6 +119,153 @@ function classifyTransaction(item) {
   return item.amount > 0 ? 'income' : 'expense';
 }
 
+const MODALITY_LABELS = {
+  income:      'Entrada',
+  expense:     'Saída',
+  savings_out: 'Aplicação',
+  savings_in:  'Resgate',
+};
+const ALL_CATEGORIES = Object.keys(CATEGORY_COLORS).filter(c => c !== 'Outros');
+
+// Modal para editar modalidade + categoria de uma transação
+const EditTransactionModal = ({ item, onClose, onSave }) => {
+  const currentModality = classifyTransaction(item);
+  const currentCat = smartCategory(item);
+
+  const [modality, setModality] = React.useState(currentModality);
+  const [category, setCategory] = React.useState(currentCat);
+  const [customCategory, setCustomCategory] = React.useState('');
+  const [showCustom, setShowCustom] = React.useState(false);
+  const [pinRule, setPinRule] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+
+  const finalCategory = showCustom ? customCategory.trim() : category;
+
+  const handleSave = async () => {
+    if (!finalCategory) return;
+    setSaving(true);
+    await onSave({ item, modality, category: finalCategory, pinRule });
+    setSaving(false);
+    onClose();
+  };
+
+  const modalityColor = {
+    income:      '#4ade80',
+    expense:     '#f87171',
+    savings_out: '#22d3ee',
+    savings_in:  '#22d3ee',
+  }[modality] || '#94a3b8';
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.92, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.92, y: 20 }}
+        className="relative z-10 w-full max-w-sm bg-[#1a1f2e] border border-white/10 rounded-3xl p-6 shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between mb-5">
+          <div className="flex-1 min-w-0 pr-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-1">Editar Transação</p>
+            <p className="text-sm font-bold text-white leading-snug line-clamp-2">{item.description}</p>
+            <p className="text-xs text-white/40 mt-0.5">{formatDate(item.transaction_date)}</p>
+          </div>
+          <button onClick={onClose} className="shrink-0 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-all">
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Modalidade */}
+        <div className="mb-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">Modalidade</p>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(MODALITY_LABELS).map(([key, label]) => {
+              const colors = {
+                income:      { bg: '#4ade8015', border: '#4ade8040', text: '#4ade80' },
+                expense:     { bg: '#f8717115', border: '#f8717140', text: '#f87171' },
+                savings_out: { bg: '#22d3ee15', border: '#22d3ee40', text: '#22d3ee' },
+                savings_in:  { bg: '#22d3ee10', border: '#22d3ee30', text: '#06b6d4' },
+              }[key];
+              return (
+                <button
+                  key={key}
+                  onClick={() => setModality(key)}
+                  className="px-3 py-2 rounded-xl text-xs font-bold transition-all border"
+                  style={modality === key
+                    ? { background: colors.bg, borderColor: colors.border, color: colors.text }
+                    : { background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }
+                  }
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Categoria */}
+        <div className="mb-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">Categoria</p>
+          {!showCustom ? (
+            <select
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-primary/50 transition-all appearance-none"
+            >
+              {ALL_CATEGORIES.map(c => (
+                <option key={c} value={c} style={{ background: '#1a1f2e' }}>{c}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              placeholder="Nome da categoria personalizada..."
+              value={customCategory}
+              onChange={e => setCustomCategory(e.target.value)}
+              autoFocus
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-primary/50 transition-all placeholder:text-white/20"
+            />
+          )}
+          <button
+            onClick={() => { setShowCustom(v => !v); setCustomCategory(''); }}
+            className="mt-1.5 text-[11px] text-primary/70 hover:text-primary transition-colors"
+          >
+            {showCustom ? '← Escolher existente' : '+ Criar categoria personalizada'}
+          </button>
+        </div>
+
+        {/* Fixar regra */}
+        <label className="flex items-start gap-3 cursor-pointer mb-5 group">
+          <div className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all ${pinRule ? 'bg-primary border-primary' : 'border-white/20 bg-white/5'}`} onClick={() => setPinRule(v => !v)}>
+            {pinRule && <Check size={10} className="text-white" />}
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-white/70 group-hover:text-white transition-colors">Fixar para transações com esta descrição</p>
+            <p className="text-[10px] text-white/30 mt-0.5">Aplicar automaticamente em futuras importações</p>
+          </div>
+        </label>
+
+        {/* Botões */}
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-all">
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !finalCategory}
+            className="flex-1 py-2.5 rounded-xl text-sm font-black bg-primary hover:bg-primary/90 text-white transition-all disabled:opacity-50"
+            style={{ backgroundColor: modalityColor, color: '#0f172a' }}
+          >
+            {saving ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 // Sub-component: Category Donut Chart
 const renderActiveShape = (props) => {
@@ -590,6 +747,8 @@ export default function Dashboard({ user }) {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const [editModal, setEditModal] = useState(null); // transaction item being edited
+
   const isOwner = effectiveUserId === user?.id;
 
   const authorName = (email) =>
@@ -725,12 +884,52 @@ export default function Dashboard({ user }) {
           const latestDate = history.find(h => h.transaction_date)?.transaction_date;
           if (latestDate) setSelectedMonth(latestDate.substring(0, 7));
         }
+
+        // Load user category rules
+        const { data: rules } = await supabase
+          .schema('stich_ai')
+          .from('category_rules')
+          .select('keyword, category, modality')
+          .eq('user_id', resolvedUserId);
+        if (rules) _userCategoryRules = rules;
       } catch (err) {
         console.warn("Supabase fetch failed:", err.message);
       }
     };
     if (user?.id) { fetchHistory(); fetchSuggestions(); }
   }, [user]);
+
+  const handleEditSave = async ({ item, modality, category, pinRule }) => {
+    try {
+      const newMetadata = { ...(item.metadata || {}), modality_override: modality };
+      await supabase
+        .schema('stich_ai')
+        .from('transactions')
+        .update({ category, metadata: newMetadata })
+        .eq('id', item.id);
+
+      // Update local state immediately
+      setData(prev => prev.map(t =>
+        t.id === item.id ? { ...t, category, metadata: newMetadata } : t
+      ));
+
+      if (pinRule && item.description) {
+        const keyword = item.description.trim().toLowerCase().slice(0, 80);
+        const userId = effectiveUserId || user?.id;
+        await supabase
+          .schema('stich_ai')
+          .from('category_rules')
+          .upsert({ user_id: userId, keyword, category, modality }, { onConflict: 'user_id,keyword' });
+        // Update in-memory rules
+        _userCategoryRules = _userCategoryRules.filter(r => r.keyword !== keyword);
+        _userCategoryRules.push({ keyword, category, modality });
+      }
+
+      setToast({ message: 'Transação atualizada.', type: 'success' });
+    } catch (err) {
+      setToast({ message: 'Erro ao salvar: ' + err.message, type: 'error' });
+    }
+  };
 
   const handleFileUpload = async (e, importType) => {
     const file = e.target.files[0];
@@ -2085,7 +2284,8 @@ export default function Dashboard({ user }) {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         layout
-                        className="group flex items-start gap-3 p-4 rounded-2xl transition-all border hover:brightness-110"
+                        onClick={() => setEditModal(item)}
+                        className="group flex items-start gap-3 p-4 rounded-2xl transition-all border hover:brightness-110 cursor-pointer"
                         style={{ background: bgColor, borderColor }}
                       >
                         {/* Ícone */}
@@ -2115,7 +2315,7 @@ export default function Dashboard({ user }) {
                           </div>
                         </div>
 
-                        {/* Valor + data */}
+                        {/* Valor + data + edit hint */}
                         <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
                           <p className={`font-black text-sm whitespace-nowrap ${styles.amountColor}`}>
                             {hideValues ? 'R$ •••••' : `${isPos ? '+' : '−'} R$ ${Math.abs(item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
@@ -2123,6 +2323,7 @@ export default function Dashboard({ user }) {
                           <p className="text-[10px] font-medium text-white/40">
                             {formatDate(item.transaction_date)}
                           </p>
+                          <span className="text-[9px] text-white/20 group-hover:text-white/50 transition-colors mt-0.5">editar</span>
                         </div>
                       </motion.div>
                     );
@@ -2506,6 +2707,17 @@ export default function Dashboard({ user }) {
           Ajuda IA
         </span>
       </motion.button>
+
+      {/* Edit Transaction Modal */}
+      <AnimatePresence>
+        {editModal && (
+          <EditTransactionModal
+            item={editModal}
+            onClose={() => setEditModal(null)}
+            onSave={handleEditSave}
+          />
+        )}
+      </AnimatePresence>
 
     </div>
   );
