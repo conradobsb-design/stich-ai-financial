@@ -893,18 +893,27 @@ export default function Dashboard({ user }) {
         if (link?.linked_to_user_id) resolvedUserId = link.linked_to_user_id;
         setEffectiveUserId(resolvedUserId);
 
-        const { data: history, error } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', resolvedUserId)
-          .order('transaction_date', { ascending: false })
-          .limit(5000);
+        // Paginate to bypass the server's 1000-row limit
+        const PAGE = 1000;
+        let allRows = [];
+        let from = 0;
+        while (true) {
+          const { data: page, error } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('user_id', resolvedUserId)
+            .order('transaction_date', { ascending: false })
+            .range(from, from + PAGE - 1);
+          if (error) throw error;
+          if (page && page.length > 0) allRows = allRows.concat(page);
+          if (!page || page.length < PAGE) break;
+          from += PAGE;
+        }
 
-        if (error) throw error;
-        if (history && history.length > 0) {
-          setData(history);
+        if (allRows.length > 0) {
+          setData(allRows);
           setIsSupabaseConnected(true);
-          const latestDate = history.find(h => h.transaction_date)?.transaction_date;
+          const latestDate = allRows.find(h => h.transaction_date)?.transaction_date;
           if (latestDate) setSelectedMonth(latestDate.substring(0, 7));
         }
 
@@ -1151,9 +1160,9 @@ export default function Dashboard({ user }) {
     //   2. Boleto + nome de emissor com fatura importada → remove
     //   3. Boleto + nome de emissor + valor ≈ total da fatura → remove (mais preciso)
     if (hasAnyCreditCard) {
-      const BOLETO_PATTERNS = ['pagamento boleto', 'pgto boleto', 'boleto bancario',
+      const BOLETO_PATTERNS = ['pagamento boleto', 'pagamento de boleto', 'pgto boleto', 'boleto bancario',
         'deb aut fatura', 'debito automatico fatura', 'debito fatura', 'pgto fatura',
-        'pagamento fatura'];
+        'pagamento fatura', 'pagamento de fatura', 'pix fatura', 'pix cartao', 'pix cartão'];
       const CARD_ISSUERS = ['itau', 'sicredi', 'nubank', 'bradesco', 'santander',
         'c6', 'inter', 'btg', 'caixa', 'next', 'neon', 'pan', 'picpay', 'mercado pago'];
 
@@ -1209,7 +1218,7 @@ export default function Dashboard({ user }) {
   const monthFiles = useMemo(() => {
     if (!selectedMonth) return [];
     const files = new Map();
-    data.filter(item => item.transaction_date?.startsWith(selectedMonth) && item.bank).forEach(item => {
+    data.filter(item => getEffectiveBillingMonth(item) === selectedMonth && item.bank).forEach(item => {
       if (!files.has(item.bank)) files.set(item.bank, item.source_type || 'bank');
     });
     return Array.from(files.entries()).map(([name, type]) => ({ name, type }));
