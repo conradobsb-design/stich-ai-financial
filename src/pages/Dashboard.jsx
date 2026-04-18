@@ -893,12 +893,32 @@ export default function Dashboard({ user }) {
         if (link?.linked_to_user_id) resolvedUserId = link.linked_to_user_id;
         setEffectiveUserId(resolvedUserId);
 
-        // Paginate to bypass the server's 1000-row limit; fetch last 5 years
+        // Phase 1: fetch last 12 months for fast first render
         const PAGE = 1000;
+        const TWELVE_MONTHS_AGO = new Date();
+        TWELVE_MONTHS_AGO.setMonth(TWELVE_MONTHS_AGO.getMonth() - 12);
+        const recentCutoff = TWELVE_MONTHS_AGO.toISOString().substring(0, 10);
+        const { data: recentPage, error: recentError } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', resolvedUserId)
+          .gte('transaction_date', recentCutoff)
+          .order('transaction_date', { ascending: false })
+          .range(0, PAGE - 1);
+        if (recentError) throw recentError;
+        const recentRows = recentPage || [];
+        if (recentRows.length > 0) {
+          setData(recentRows);
+          setIsSupabaseConnected(true);
+          const latestDate = recentRows.find(h => h.transaction_date)?.transaction_date;
+          if (latestDate) setSelectedMonth(latestDate.substring(0, 7));
+        }
+
+        // Phase 2: fetch older history (beyond 12 months) in background, up to 5 years
         const FIVE_YEARS_AGO = new Date();
         FIVE_YEARS_AGO.setFullYear(FIVE_YEARS_AGO.getFullYear() - 5);
         const cutoff = FIVE_YEARS_AGO.toISOString().substring(0, 10);
-        let allRows = [];
+        let olderRows = [];
         let from = 0;
         while (true) {
           const { data: page, error } = await supabase
@@ -906,20 +926,15 @@ export default function Dashboard({ user }) {
             .select('*')
             .eq('user_id', resolvedUserId)
             .gte('transaction_date', cutoff)
+            .lt('transaction_date', recentCutoff)
             .order('transaction_date', { ascending: false })
             .range(from, from + PAGE - 1);
-          if (error) throw error;
-          if (page && page.length > 0) allRows = allRows.concat(page);
+          if (error) break;
+          if (page && page.length > 0) olderRows = olderRows.concat(page);
           if (!page || page.length < PAGE) break;
           from += PAGE;
         }
-
-        if (allRows.length > 0) {
-          setData(allRows);
-          setIsSupabaseConnected(true);
-          const latestDate = allRows.find(h => h.transaction_date)?.transaction_date;
-          if (latestDate) setSelectedMonth(latestDate.substring(0, 7));
-        }
+        if (olderRows.length > 0) setData(prev => [...prev, ...olderRows]);
 
         // Load user category rules
         const { data: rules } = await supabase
@@ -1107,6 +1122,18 @@ export default function Dashboard({ user }) {
 
   const projectedInstallments = useMemo(() => {
     const INST_RE = /\s+(\d{2})\/(\d{2})$/;
+
+    // Pre-build O(n) lookup of real credit card transactions → O(1) alreadyReal check
+    const realKeys = new Set();
+    data.forEach(item => {
+      if (item.source_type !== 'credit_card' || item.metadata?.projetado) return;
+      const bm = getEffectiveBillingMonth(item);
+      if (!bm) return;
+      const baseDesc = (item.description || '').replace(INST_RE, '').trim();
+      realKeys.add(`${bm}|${baseDesc}|${Math.round(item.amount * 100)}`);
+    });
+
+    const seen = new Set();
     const projections = [];
     data.forEach(item => {
       if (item.source_type !== 'credit_card' || item.metadata?.projetado) return;
@@ -1122,14 +1149,10 @@ export default function Dashboard({ user }) {
       for (let i = current + 1; i <= total; i++) {
         const d = new Date(yr, mo - 1 + (i - current), 1);
         const futureMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        const alreadyReal = data.some(t => {
-          if (t.source_type !== 'credit_card' || t.metadata?.projetado) return false;
-          const tBase = (t.description || '').replace(INST_RE, '').trim();
-          return getEffectiveBillingMonth(t) === futureMonth &&
-                 tBase === baseDesc &&
-                 Math.abs(t.amount - item.amount) < 0.01;
-        });
-        if (alreadyReal) continue;
+        if (realKeys.has(`${futureMonth}|${baseDesc}|${Math.round(item.amount * 100)}`)) continue;
+        const dedupKey = `${futureMonth}|${baseDesc}|${item.amount}`;
+        if (seen.has(dedupKey)) continue;
+        seen.add(dedupKey);
         projections.push({
           ...item,
           id: `proj_${item.id}_${i}`,
@@ -1138,14 +1161,7 @@ export default function Dashboard({ user }) {
         });
       }
     });
-    // dedup: same futureMonth + baseDesc + amount
-    const seen = new Set();
-    return projections.filter(p => {
-      const key = `${p.metadata.billingMonth}_${p.description}_${p.amount}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    return projections;
   }, [data]);
 
   const monthlyData = useMemo(() => {
