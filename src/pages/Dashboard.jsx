@@ -94,6 +94,20 @@ function smartCategory(item) {
   return stored || 'Outros';
 }
 
+// Extrai o mês de faturamento (YYYY-MM) do nome do arquivo de fatura de cartão.
+// Ex: "Sicredi_Fatura_01_26.pdf" → "2026-01"
+function getBillingMonth(item) {
+  if (item.source_type !== 'credit_card') return null;
+  const bank = (item.bank || '').replace(/\s/g, '');
+  // Padrão: _MM_YY.pdf  (ex: _01_26.pdf)
+  let m = bank.match(/_(\d{2})_(\d{2})\.pdf$/i);
+  if (m) return `20${m[2]}-${m[1]}`;
+  // Padrão: _MM_YYYY.pdf (ex: _01_2026.pdf)
+  m = bank.match(/_(\d{2})_(\d{4})\.pdf$/i);
+  if (m) return `${m[2]}-${m[1]}`;
+  return null;
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return 'Data não registrada';
   // transaction_date vem como "2026-02-05T00:00:00+00:00" — extrai só a parte da data
@@ -1076,7 +1090,10 @@ export default function Dashboard({ user }) {
 
   const monthlyData = useMemo(() => {
     if (!selectedMonth) return [];
-    let filtered = data.filter(item => item.transaction_date?.startsWith(selectedMonth));
+    let filtered = data.filter(item => {
+      const month = getBillingMonth(item) || item.transaction_date?.substring(0, 7);
+      return month === selectedMonth;
+    });
 
     // Anti-duplicidade: quando há fatura de cartão importada, remove do extrato bancário
     // o pagamento de boleto correspondente — em qualquer mês.
@@ -1126,7 +1143,9 @@ export default function Dashboard({ user }) {
   }, [data, selectedMonth, searchTerm, hasAnyCreditCard, creditCardTotalByIssuer]);
 
   const availableMonths = useMemo(() => {
-    const months = new Set(data.filter(item => item.transaction_date).map(item => item.transaction_date.substring(0, 7)));
+    const months = new Set(data.filter(item => item.transaction_date).map(item =>
+      getBillingMonth(item) || item.transaction_date.substring(0, 7)
+    ));
     return Array.from(months).sort().reverse();
   }, [data]);
 
