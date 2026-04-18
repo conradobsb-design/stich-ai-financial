@@ -1196,6 +1196,12 @@ export default function Dashboard({ user }) {
       ...data.filter(item => item.transaction_date).map(item => getEffectiveBillingMonth(item)),
       ...projectedInstallments.map(p => p.metadata.billingMonth),
     ].filter(Boolean));
+    // Always include the last 12 months so the user can navigate even without imported data
+    const today = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
     return Array.from(months).sort().reverse();
   }, [data, projectedInstallments]);
 
