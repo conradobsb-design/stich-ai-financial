@@ -99,13 +99,16 @@ function smartCategory(item) {
 function getBillingMonth(item) {
   if (item.source_type !== 'credit_card') return null;
   const bank = (item.bank || '').replace(/\s/g, '');
-  // Padrão: _MM_YY.pdf  (ex: _01_26.pdf)
   let m = bank.match(/_(\d{2})_(\d{2})\.pdf$/i);
   if (m) return `20${m[2]}-${m[1]}`;
-  // Padrão: _MM_YYYY.pdf (ex: _01_2026.pdf)
   m = bank.match(/_(\d{2})_(\d{4})\.pdf$/i);
   if (m) return `${m[2]}-${m[1]}`;
   return null;
+}
+
+function getEffectiveBillingMonth(item) {
+  if (item.metadata?.billingMonth) return item.metadata.billingMonth;
+  return getBillingMonth(item) || item.transaction_date?.substring(0, 7);
 }
 
 function formatDate(dateStr) {
@@ -1088,12 +1091,57 @@ export default function Dashboard({ user }) {
     return totals;
   }, [data, hasAnyCreditCard]);
 
+  const projectedInstallments = useMemo(() => {
+    const INST_RE = /\s+(\d{2})\/(\d{2})$/;
+    const projections = [];
+    data.forEach(item => {
+      if (item.source_type !== 'credit_card' || item.metadata?.projetado) return;
+      const match = item.description?.match(INST_RE);
+      if (!match) return;
+      const current = parseInt(match[1]);
+      const total   = parseInt(match[2]);
+      if (current >= total) return;
+      const billingMonth = getEffectiveBillingMonth(item);
+      if (!billingMonth) return;
+      const [yr, mo] = billingMonth.split('-').map(Number);
+      const baseDesc = item.description.replace(INST_RE, '').trim();
+      for (let i = current + 1; i <= total; i++) {
+        const d = new Date(yr, mo - 1 + (i - current), 1);
+        const futureMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const alreadyReal = data.some(t => {
+          if (t.source_type !== 'credit_card' || t.metadata?.projetado) return false;
+          const tBase = (t.description || '').replace(INST_RE, '').trim();
+          return getEffectiveBillingMonth(t) === futureMonth &&
+                 tBase === baseDesc &&
+                 Math.abs(t.amount - item.amount) < 0.01;
+        });
+        if (alreadyReal) continue;
+        projections.push({
+          ...item,
+          id: `proj_${item.id}_${i}`,
+          description: `${baseDesc} ${String(i).padStart(2, '0')}/${String(total).padStart(2, '0')}`,
+          metadata: { ...(item.metadata || {}), projetado: true, billingMonth: futureMonth },
+        });
+      }
+    });
+    // dedup: same futureMonth + baseDesc + amount
+    const seen = new Set();
+    return projections.filter(p => {
+      const key = `${p.metadata.billingMonth}_${p.description}_${p.amount}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [data]);
+
   const monthlyData = useMemo(() => {
     if (!selectedMonth) return [];
     let filtered = data.filter(item => {
-      const month = getBillingMonth(item) || item.transaction_date?.substring(0, 7);
+      const month = getEffectiveBillingMonth(item);
       return month === selectedMonth;
     });
+    const projForMonth = projectedInstallments.filter(p => p.metadata.billingMonth === selectedMonth);
+    filtered = [...filtered, ...projForMonth];
 
     // Anti-duplicidade: quando há fatura de cartão importada, remove do extrato bancário
     // o pagamento de boleto correspondente — em qualquer mês.
@@ -1140,14 +1188,15 @@ export default function Dashboard({ user }) {
       );
     }
     return filtered;
-  }, [data, selectedMonth, searchTerm, hasAnyCreditCard, creditCardTotalByIssuer]);
+  }, [data, selectedMonth, searchTerm, hasAnyCreditCard, creditCardTotalByIssuer, projectedInstallments]);
 
   const availableMonths = useMemo(() => {
-    const months = new Set(data.filter(item => item.transaction_date).map(item =>
-      getBillingMonth(item) || item.transaction_date.substring(0, 7)
-    ));
+    const months = new Set([
+      ...data.filter(item => item.transaction_date).map(item => getEffectiveBillingMonth(item)),
+      ...projectedInstallments.map(p => p.metadata.billingMonth),
+    ].filter(Boolean));
     return Array.from(months).sort().reverse();
-  }, [data]);
+  }, [data, projectedInstallments]);
 
   // Arquivos importados para o mês selecionado
   const monthFiles = useMemo(() => {
@@ -2300,6 +2349,7 @@ export default function Dashboard({ user }) {
                     const borderColor = cls === 'expense' ? `${catColor}25` : cls === 'income' ? 'rgba(74,222,128,0.15)' : 'rgba(34,211,238,0.15)';
                     const bgColor     = cls === 'expense' ? `${catColor}08` : cls === 'income' ? 'rgba(74,222,128,0.06)' : 'rgba(34,211,238,0.06)';
 
+                    const isProjected = item.metadata?.projetado === true;
                     return (
                       <motion.div
                         key={item.id || i}
@@ -2307,8 +2357,8 @@ export default function Dashboard({ user }) {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         layout
-                        onClick={() => setEditModal(item)}
-                        className="group flex items-start gap-3 p-4 rounded-2xl transition-all border hover:brightness-110 cursor-pointer"
+                        onClick={() => !isProjected && setEditModal(item)}
+                        className={`group flex items-start gap-3 p-4 rounded-2xl transition-all border ${isProjected ? 'opacity-60 cursor-default border-dashed' : 'hover:brightness-110 cursor-pointer'}`}
                         style={{ background: bgColor, borderColor }}
                       >
                         {/* Ícone */}
@@ -2322,15 +2372,18 @@ export default function Dashboard({ user }) {
                             {item.description}
                           </p>
                           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                            {/* Badge categoria com cor */}
                             <span
                               className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border"
                               style={{ color: catColor, borderColor: `${catColor}40`, background: `${catColor}15` }}
                             >
                               {cat}
                             </span>
-                            {/* Banco */}
-                            {bank && (
+                            {isProjected && (
+                              <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border border-dashed border-white/30 text-white/40">
+                                projeção
+                              </span>
+                            )}
+                            {bank && !isProjected && (
                               <span className="text-[9px] font-semibold text-white/30">
                                 {bank}
                               </span>
@@ -2346,7 +2399,7 @@ export default function Dashboard({ user }) {
                           <p className="text-[10px] font-medium text-white/40">
                             {formatDate(item.transaction_date)}
                           </p>
-                          <span className="text-[9px] text-white/20 group-hover:text-white/50 transition-colors mt-0.5">editar</span>
+                          {!isProjected && <span className="text-[9px] text-white/20 group-hover:text-white/50 transition-colors mt-0.5">editar</span>}
                         </div>
                       </motion.div>
                     );
