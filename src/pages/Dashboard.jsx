@@ -107,6 +107,7 @@ function getBillingMonth(item) {
 }
 
 function getEffectiveBillingMonth(item) {
+  if (item.billing_month) return item.billing_month;
   if (item.metadata?.billingMonth) return item.metadata.billingMonth;
   return getBillingMonth(item) || item.transaction_date?.substring(0, 7);
 }
