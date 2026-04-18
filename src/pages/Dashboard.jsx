@@ -1069,20 +1069,29 @@ export default function Dashboard({ user }) {
         payload.image_mime = file.type;
       }
 
-      await fetch(WEBHOOK_URL, {
+      const n8nRes = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      // Registrar arquivo importado para evitar duplicatas futuras
-      await supabase.schema('stich_ai').from('imported_files').insert({
-        user_id: uploadUserId,
-        file_name: file.name,
-        import_type: importType || 'extrato',
-      });
+      if (n8nRes.status === 409) {
+        setToast({ message: 'Este arquivo já foi importado anteriormente.', type: 'error' });
+        return;
+      }
 
-      window.location.reload();
+      let importedCount = 0;
+      try {
+        const n8nData = await n8nRes.json();
+        importedCount = n8nData?.count ?? 0;
+      } catch (e) {}
+
+      if (importedCount > 0) {
+        setToast({ message: `${importedCount} transações importadas com sucesso!`, type: 'success' });
+        window.location.reload();
+      } else {
+        setToast({ message: 'Nenhuma transação encontrada no arquivo.', type: 'warning' });
+      }
     } catch (error) {
       console.error("Error processing file:", error);
       setToast({ message: 'Erro ao processar arquivo. Tente novamente.', type: 'error' });
