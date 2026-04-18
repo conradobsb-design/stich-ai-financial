@@ -893,8 +893,11 @@ export default function Dashboard({ user }) {
         if (link?.linked_to_user_id) resolvedUserId = link.linked_to_user_id;
         setEffectiveUserId(resolvedUserId);
 
-        // Paginate to bypass the server's 1000-row limit
+        // Paginate to bypass the server's 1000-row limit; fetch last 5 years
         const PAGE = 1000;
+        const FIVE_YEARS_AGO = new Date();
+        FIVE_YEARS_AGO.setFullYear(FIVE_YEARS_AGO.getFullYear() - 5);
+        const cutoff = FIVE_YEARS_AGO.toISOString().substring(0, 10);
         let allRows = [];
         let from = 0;
         while (true) {
@@ -902,6 +905,7 @@ export default function Dashboard({ user }) {
             .from('transactions')
             .select('*')
             .eq('user_id', resolvedUserId)
+            .gte('transaction_date', cutoff)
             .order('transaction_date', { ascending: false })
             .range(from, from + PAGE - 1);
           if (error) throw error;
