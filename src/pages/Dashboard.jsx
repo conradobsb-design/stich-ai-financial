@@ -1107,7 +1107,8 @@ export default function Dashboard({ user }) {
     if (!canAccess('pluggy')) { navigate('/pricing'); return; }
     setPluggyConnecting(true);
     try {
-      const res = await fetch(import.meta.env.VITE_N8N_PLUGGY_TOKEN_URL, {
+      const pluggyTokenUrl = import.meta.env.VITE_N8N_PLUGGY_TOKEN_URL || 'https://conradobsb.app.n8n.cloud/webhook/pluggy-token';
+      const res = await fetch(pluggyTokenUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user?.id }),
@@ -1120,7 +1121,7 @@ export default function Dashboard({ user }) {
       }
       setPluggyToken(connectToken);
     } catch (err) {
-      setToast({ message: `Erro: ${err?.message || String(err)}`, type: 'error' });
+      setToast({ message: 'Erro ao conectar banco. Tente novamente.', type: 'error' });
       setPluggyConnecting(false);
     }
   };
