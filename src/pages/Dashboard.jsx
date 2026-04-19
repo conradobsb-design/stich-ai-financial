@@ -2814,7 +2814,7 @@ export default function Dashboard({ user }) {
       {pluggyToken && (
         <PluggyConnect
           connectToken={pluggyToken}
-          includeSandbox={false}
+          includeSandbox={true}
           onSuccess={handlePluggySuccess}
           onError={() => {
             setToast({ message: 'Erro ao conectar banco.', type: 'error' });
