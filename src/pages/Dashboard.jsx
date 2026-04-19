@@ -254,6 +254,7 @@ const EditTransactionModal = ({ item, onClose, onSave }) => {
               onChange={e => setCustomCategory(e.target.value)}
               autoFocus
               className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary/50 transition-all ${isLight ? 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400' : 'bg-white/5 border-white/10 text-white placeholder:text-white/20'}`}
+              style={{ WebkitTextFillColor: isLight ? '#1e293b' : '#ffffff', caretColor: isLight ? '#1e293b' : '#ffffff' }}
             />
           )}
           <button
@@ -711,6 +712,7 @@ function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, u
                     onChange={e => setInput(e.target.value)}
                     placeholder="Pergunte sobre seus dados financeiros..."
                     className="flex-1 bg-transparent text-white placeholder-on-surface-variant/50 text-sm outline-none"
+                    style={{ WebkitTextFillColor: '#ffffff', caretColor: '#ffffff' }}
                     disabled={loading}
                   />
                   <button
@@ -2246,6 +2248,7 @@ export default function Dashboard({ user }) {
                     type="text"
                     placeholder="Pesquisar..."
                     className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-9 pr-4 text-xs text-white outline-none focus:border-primary/50 transition-all"
+                    style={{ WebkitTextFillColor: '#ffffff', caretColor: '#ffffff' }}
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                   />
@@ -2333,6 +2336,7 @@ export default function Dashboard({ user }) {
                             value={minAmount}
                             onChange={e => setMinAmount(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-2 py-2 text-xs text-white outline-none focus:border-primary/50 transition-all placeholder:text-white/20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            style={{ WebkitTextFillColor: '#ffffff', caretColor: '#ffffff' }}
                           />
                         </div>
                         <span className="text-white/30 text-xs shrink-0">—</span>
@@ -2345,6 +2349,7 @@ export default function Dashboard({ user }) {
                             value={maxAmount}
                             onChange={e => setMaxAmount(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-2 py-2 text-xs text-white outline-none focus:border-primary/50 transition-all placeholder:text-white/20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            style={{ WebkitTextFillColor: '#ffffff', caretColor: '#ffffff' }}
                           />
                         </div>
                         {(minAmount !== '' || maxAmount !== '') && (
@@ -2611,6 +2616,7 @@ export default function Dashboard({ user }) {
                         onChange={e => setInviteEmail(e.target.value)}
                         required
                         className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-9 pr-3 text-sm text-white outline-none focus:border-primary/50 transition-all placeholder:text-white/30"
+                        style={{ WebkitTextFillColor: '#ffffff', caretColor: '#ffffff' }}
                       />
                     </div>
                     <button
@@ -2800,6 +2806,7 @@ export default function Dashboard({ user }) {
                   placeholder="Descreva sua sugestão para a plataforma..."
                   rows={3}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-yellow-400/50 transition-all placeholder:text-white/20 resize-none"
+                  style={{ WebkitTextFillColor: '#ffffff', caretColor: '#ffffff' }}
                 />
                 <button
                   onClick={submitSuggestion}
