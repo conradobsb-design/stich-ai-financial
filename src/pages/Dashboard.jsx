@@ -22,6 +22,7 @@ import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 import { useSEO } from '../hooks/useSEO';
 import { useSubscription } from '../hooks/useSubscription';
 import FeatureGate from '../components/FeatureGate';
+import { PluggyConnect } from 'react-pluggy-connect';
 
 import * as pdfjsLib from 'pdfjs-dist';
 // Carrega worker via CDN para evitar erro de MIME type do nginx com .mjs
@@ -752,6 +753,8 @@ export default function Dashboard({ user }) {
   const [showFileBadges, setShowFileBadges] = useState(true);
   const [prophetPredictions, setProphetPredictions] = useState(null);
   const [prophetLoading, setProphetLoading] = useState(false);
+  const [pluggyConnecting, setPluggyConnecting] = useState(false);
+  const [pluggyToken, setPluggyToken] = useState(null);
   const [showSoraya, setShowSoraya] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [newSuggestion, setNewSuggestion] = useState('');
@@ -1098,6 +1101,42 @@ export default function Dashboard({ user }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleConnectBank = async () => {
+    if (!canAccess('pluggy')) { navigate('/pricing'); return; }
+    setPluggyConnecting(true);
+    try {
+      const res = await fetch(import.meta.env.VITE_N8N_PLUGGY_TOKEN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id }),
+      });
+      const { connectToken, error } = await res.json();
+      if (!connectToken || error) {
+        setToast({ message: 'Erro ao iniciar conexão bancária.', type: 'error' });
+        setPluggyConnecting(false);
+        return;
+      }
+      setPluggyToken(connectToken);
+    } catch (err) {
+      setToast({ message: 'Erro ao conectar banco. Tente novamente.', type: 'error' });
+      setPluggyConnecting(false);
+    }
+  };
+
+  const handlePluggySuccess = async (itemData) => {
+    const item = itemData.item || itemData;
+    await supabase.schema('stich_ai').from('connected_accounts').upsert({
+      user_id: user?.id,
+      pluggy_item_id: item.id,
+      bank_name: item.institution?.name || 'Banco',
+      connected_at: new Date().toISOString(),
+      status: 'active',
+    }, { onConflict: 'pluggy_item_id' });
+    setToast({ message: `${item.institution?.name || 'Banco'} conectado com sucesso!`, type: 'success' });
+    setPluggyToken(null);
+    setPluggyConnecting(false);
   };
 
   const handleLogout = async () => {
@@ -2769,6 +2808,24 @@ export default function Dashboard({ user }) {
         )}
       </AnimatePresence>
 
+      {/* Pluggy Connect Widget */}
+      {pluggyToken && (
+        <PluggyConnect
+          connectToken={pluggyToken}
+          includeSandbox={false}
+          onSuccess={handlePluggySuccess}
+          onError={() => {
+            setToast({ message: 'Erro ao conectar banco.', type: 'error' });
+            setPluggyToken(null);
+            setPluggyConnecting(false);
+          }}
+          onClose={() => {
+            setPluggyToken(null);
+            setPluggyConnecting(false);
+          }}
+        />
+      )}
+
       {/* Hidden file inputs */}
       <input id="fileInputExtrato"     type="file" accept=".csv,.pdf,.ofx,.jpg,.jpeg,.png" className="hidden" onChange={e => handleFileUpload(e, 'extrato')} />
       <input id="fileInputCartao"      type="file" accept=".csv,.pdf,.ofx,.jpg,.jpeg,.png" className="hidden" onChange={e => handleFileUpload(e, 'cartao')} />
@@ -2808,6 +2865,20 @@ export default function Dashboard({ user }) {
                 <Landmark size={13} />
                 <span className="hidden sm:inline">Investimentos</span>
               </label>
+
+              {/* Separador */}
+              <div className="w-px h-6 bg-white/10 mx-1" />
+
+              {/* Conectar banco — verde */}
+              <button
+                onClick={handleConnectBank}
+                disabled={pluggyConnecting}
+                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 shadow-md shadow-emerald-500/30"
+                title={canAccess('pluggy') ? 'Conectar banco automaticamente' : 'Disponível no plano Private'}
+              >
+                <Link size={13} />
+                <span className="hidden sm:inline">{pluggyConnecting ? 'Conectando...' : 'Conectar banco'}</span>
+              </button>
             </>
           )}
         </motion.div>
