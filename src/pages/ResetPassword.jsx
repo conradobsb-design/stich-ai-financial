@@ -80,7 +80,7 @@ export default function ResetPassword() {
           <p className="text-on-surface-variant text-sm mt-1">Redefinição de senha</p>
         </div>
 
-        <div className="glass-card rounded-3xl p-8 border border-white/8">
+        <div className="glass-card rounded-3xl p-5 sm:p-8 border border-white/8">
 
           {status === 'success' ? (
             <div className="text-center py-6">

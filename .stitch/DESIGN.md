@@ -81,7 +81,7 @@ border-radius: 20px;
 | Extrato (Transactions List) | `d986f9d5b10d4fd99d8213fc6243e50b` | `designs/extrato-co/extrato-list-dark.png` |
 | Nova Transação (Modal) | `e7cb2af3e5da495d827a2d0a25898c26` | `designs/extrato-co/add-transaction-dark.png` |
 | Análise / Insights | `59a8f043744644be852387478f8dc1a9` | `designs/extrato-co/insights-dark.png` |
-| Perfil / Configurações | — | Planned |
+| Perfil / Configurações | `66b0cb82563f4b23a79416d97fd8bd37` | `designs/extrato-co/profile-dark.png` |
 
 ### Legacy Screens (Análise Financeira Extrato)
 | Screen | Stitch ID |

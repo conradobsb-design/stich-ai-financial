@@ -6,11 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate-pwa-assets": "pwa-assets-generator --config pwa-assets.config.js"
   },
   "devDependencies": {
+    "@vite-pwa/assets-generator": "^1.0.2",
     "typescript": "~6.0.2",
-    "vite": "^5.4.11"
+    "vite": "^5.4.11",
+    "vite-plugin-pwa": "^1.2.0"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.3",

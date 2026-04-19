@@ -115,7 +115,7 @@ function FAQItem({ item }) {
     <div className="border border-outline-variant rounded-2xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-5 text-left hover:bg-white/5 transition-colors"
+        className="w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-white/5 transition-colors"
       >
         <span className="text-white font-medium text-sm pr-4">{item.q}</span>
         <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
@@ -131,7 +131,7 @@ function FAQItem({ item }) {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 text-on-surface-variant text-sm leading-relaxed border-t border-outline-variant/50 pt-4">
+            <div className="px-4 sm:px-5 pb-4 sm:pb-5 text-on-surface-variant text-sm leading-relaxed border-t border-outline-variant/50 pt-4">
               {item.a}
             </div>
           </motion.div>
@@ -174,7 +174,7 @@ export default function FAQ() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <div className="glass-card rounded-[2rem] p-10 mb-6">
+          <div className="glass-card rounded-[2rem] p-6 sm:p-10 mb-6">
             <div className="flex items-center gap-4 mb-2">
               <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/30">
                 <HelpCircle className="text-secondary" size={24} />
@@ -209,7 +209,7 @@ export default function FAQ() {
             ))}
           </div>
 
-          <div className="glass-card rounded-[2rem] p-8 mt-6 text-center">
+          <div className="glass-card rounded-[2rem] p-5 sm:p-8 mt-6 text-center">
             <p className="text-white font-semibold mb-2">Não encontrou o que procurava?</p>
             <p className="text-on-surface-variant text-sm mb-4">
               Nossa equipe está pronta para ajudar.

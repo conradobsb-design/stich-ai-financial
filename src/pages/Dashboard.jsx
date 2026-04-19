@@ -331,7 +331,7 @@ const CategoryChart = ({ chartData, onCategoryClick, selectedCategories }) => {
   const total = chartData.reduce((s, d) => s + d.value, 0);
 
   return (
-    <div className="glass-card p-8 rounded-[2.5rem] h-full">
+    <div className="glass-card p-4 sm:p-6 md:p-8 rounded-[2.5rem] h-full">
       <div className="flex items-center gap-2 mb-6">
         <PieIcon className="text-primary" size={22} />
         <h3 className="font-black text-xl text-white">Resumo por Categoria</h3>
@@ -1640,7 +1640,7 @@ export default function Dashboard({ user }) {
   };
 
   return (
-    <div className="bg-background text-on-surface min-h-screen pb-32 mesh-bg">
+    <div className="bg-background text-on-surface min-h-screen pb-48 md:pb-32 mesh-bg">
 
       {/* Toast notification */}
       {toast && (
@@ -1666,7 +1666,7 @@ export default function Dashboard({ user }) {
       )}
 
       {/* Header Premium */}
-      <header className="fixed top-0 w-full z-50 glass border-b border-outline-variant py-4 px-6 flex justify-between items-center transition-all">
+      <header className="fixed top-0 w-full z-50 glass border-b border-outline-variant pt-[max(1rem,env(safe-area-inset-top,1rem))] pb-4 px-6 flex justify-between items-center transition-all">
         <div className="flex items-center gap-4">
           <motion.div whileHover={{ scale: 1.1 }} className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-black shadow-lg shadow-primary/20">
             E
@@ -1797,7 +1797,7 @@ export default function Dashboard({ user }) {
         >
           
           {/* Main Balance Card (Bento Large) */}
-          <motion.div variants={itemVariants} className="md:col-span-8 glass-card p-8 rounded-[2.5rem] relative overflow-hidden group">
+          <motion.div variants={itemVariants} className="md:col-span-8 glass-card p-4 sm:p-6 md:p-8 rounded-[2.5rem] relative overflow-hidden group">
             <div className="relative z-10 flex flex-col gap-6">
 
               {/* Header: label + period + erosion badge */}
@@ -1818,7 +1818,7 @@ export default function Dashboard({ user }) {
               </div>
 
               {/* Big number */}
-              <div className={`text-[4rem] md:text-[5rem] leading-none font-black tracking-tighter text-glow ${
+              <div className={`text-[2.5rem] sm:text-[3.5rem] md:text-[5rem] leading-none font-black tracking-tighter text-glow ${
                 aggregates.patrimonioErosion ? 'text-error'
                 : aggregates.balance >= 0    ? 'text-success'
                 : 'text-error'
@@ -2052,7 +2052,7 @@ export default function Dashboard({ user }) {
           </motion.div>
 
           {/* New Component: Health Gauge */}
-          <motion.div variants={itemVariants} className="md:col-span-4 glass-card rounded-[2.5rem] p-8 flex flex-col border-t border-t-white/10 shadow-2xl">
+          <motion.div variants={itemVariants} className="md:col-span-4 glass-card rounded-[2.5rem] p-4 sm:p-6 md:p-8 flex flex-col border-t border-t-white/10 shadow-2xl">
             <div className="flex flex-col items-center justify-center mb-4">
               <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-widest mb-4">Saúde Financeira</h3>
               <HealthIndicator
@@ -2235,7 +2235,7 @@ export default function Dashboard({ user }) {
           </motion.div>
 
           {/* Transactions List with Search + Filter */}
-          <motion.div ref={transactionsRef} variants={itemVariants} className="lg:col-span-5 glass-card p-8 rounded-[2.5rem] flex flex-col">
+          <motion.div ref={transactionsRef} variants={itemVariants} className="lg:col-span-5 glass-card p-4 sm:p-6 md:p-8 rounded-[2.5rem] flex flex-col">
             {/* Header: Title + Search + Filter toggle */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
               <h3 className="font-black text-xl text-white">Transações</h3>
@@ -2573,7 +2573,7 @@ export default function Dashboard({ user }) {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 40, opacity: 0 }}
               transition={{ type: 'spring', bounce: 0.2 }}
-              className="glass-card rounded-[2rem] p-8 w-full max-w-md relative"
+              className="glass-card rounded-[2rem] p-4 sm:p-8 w-full max-w-md relative"
               onClick={e => e.stopPropagation()}
             >
               <button
@@ -2838,7 +2838,7 @@ export default function Dashboard({ user }) {
       <input id="fileInputInvestimento" type="file" accept=".csv,.pdf,.ofx,.jpg,.jpeg,.png" className="hidden" onChange={e => handleFileUpload(e, 'investimento')} />
 
       {/* QuickActionsBar (Fixed Bottom Glass) */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60]">
+      <div className="fixed bottom-[max(2rem,env(safe-area-inset-bottom,2rem))] left-1/2 -translate-x-1/2 z-[60]">
         <motion.div
           initial={{ y: 100 }}
           animate={{ y: 0 }}
@@ -2896,7 +2896,7 @@ export default function Dashboard({ user }) {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.5, type: 'spring', stiffness: 200 }}
         onClick={() => canAccess('chat_ia') ? setShowChat(true) : navigate('/pricing')}
-        className="fixed bottom-8 right-8 z-[60] w-14 h-14 rounded-full bg-secondary hover:bg-secondary/90 text-white shadow-xl shadow-secondary/40 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group"
+        className="fixed bottom-[max(2rem,env(safe-area-inset-bottom,2rem))] right-8 z-[60] w-14 h-14 rounded-full bg-secondary hover:bg-secondary/90 text-white shadow-xl shadow-secondary/40 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group"
         title={canAccess('chat_ia') ? 'Ajuda IA' : 'Chat IA — Plano Private'}
 
       >

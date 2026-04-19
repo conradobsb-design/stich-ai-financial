@@ -96,9 +96,9 @@ export default function TermosDeUso() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="glass-card rounded-[2rem] p-10"
+          className="glass-card rounded-[2rem] p-5 sm:p-10"
         >
-          <div className="flex items-center gap-4 mb-8">
+          <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
             <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/30">
               <FileText className="text-secondary" size={24} />
             </div>

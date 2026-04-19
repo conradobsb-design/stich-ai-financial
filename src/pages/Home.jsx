@@ -27,7 +27,7 @@ function Hero() {
     <section className="relative overflow-hidden pt-28 pb-24 px-6">
       {/* glow */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[600px] rounded-full bg-sky-500/10 blur-[120px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[min(900px,100vw)] h-[600px] rounded-full bg-sky-500/10 blur-[120px]" />
       </div>
 
       <motion.div
@@ -43,7 +43,7 @@ function Hero() {
 
         <motion.h1
           variants={fadeUp}
-          className="text-5xl md:text-7xl font-black tracking-tight leading-[1.05] mb-6"
+          className="text-3xl sm:text-5xl md:text-7xl font-black tracking-tight leading-[1.05] mb-6"
         >
           Visualize seu{' '}
           <span className="bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
@@ -191,7 +191,7 @@ function ComoFunciona() {
             <motion.div
               key={title}
               variants={fadeUp}
-              className="relative rounded-2xl border border-slate-800 bg-slate-900/60 p-8 hover:border-slate-600 transition-colors duration-300"
+              className="relative rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-8 hover:border-slate-600 transition-colors duration-300"
             >
               <span className="absolute top-6 right-6 text-6xl font-black text-slate-800 select-none leading-none">
                 {i + 1}
@@ -302,10 +302,10 @@ function CTA() {
       >
         <motion.div
           variants={fadeUp}
-          className="rounded-3xl border border-sky-500/20 bg-gradient-to-b from-sky-500/10 to-transparent p-12"
+          className="rounded-3xl border border-sky-500/20 bg-gradient-to-b from-sky-500/10 to-transparent p-6 sm:p-12"
         >
           <div className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full bg-sky-500/10 blur-[100px]" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(600px,100vw)] h-[400px] rounded-full bg-sky-500/10 blur-[100px]" />
           </div>
           <CheckCircle2 size={40} className="text-sky-400 mx-auto mb-6" />
           <h2 className="text-4xl md:text-5xl font-black mb-4">

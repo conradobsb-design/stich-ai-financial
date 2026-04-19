@@ -73,11 +73,11 @@ export default function Login() {
     <div className="mesh-bg relative min-h-screen flex items-center justify-center p-6 overflow-hidden">
       
       {/* Decorative Orbs */}
-      <div className="absolute top-1/4 -left-20 w-80 h-80 bg-primary/20 rounded-full blur-[100px] animate-pulse"></div>
-      <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-tertiary/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute top-1/4 -left-10 w-48 h-48 sm:w-80 sm:h-80 bg-primary/20 rounded-full blur-[100px] animate-pulse"></div>
+      <div className="absolute bottom-1/4 -right-10 w-48 h-48 sm:w-80 sm:h-80 bg-tertiary/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
 
       <motion.div 
-        className="glass-card w-full max-w-md p-10 rounded-[2.5rem] relative z-10"
+        className="glass-card w-full max-w-md p-6 sm:p-10 rounded-[2.5rem] relative z-10"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}

@@ -360,7 +360,7 @@ export default function Onboarding() {
       </div>
       <div>
         <p className="text-[11px] font-black uppercase tracking-widest text-white/30 mb-3">Faixa de renda mensal</p>
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {INCOME_RANGES.map(r => (
             <button key={r.id} onClick={() => setForm(f => ({ ...f, incomeRange: r.id }))}
               className="p-4 rounded-2xl text-left transition-all"
@@ -505,7 +505,7 @@ export default function Onboarding() {
         </div>
 
         {/* Barra de progresso */}
-        <div className="px-8 pt-8 pb-4">
+        <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-4">
           <div className="flex items-center justify-between mb-3">
             <button onClick={() => step > 0 ? go(step - 1) : navigate('/pricing')}
               className="flex items-center gap-1.5 text-[12px] font-medium text-white/25 hover:text-white/60 transition-colors">
@@ -540,7 +540,7 @@ export default function Onboarding() {
         </div>
 
         {/* Conteúdo do step */}
-        <div className="flex-1 px-8 py-4 overflow-y-auto">
+        <div className="flex-1 px-4 sm:px-8 py-4 overflow-y-auto max-h-[calc(100dvh-280px)]">
           <AnimatePresence mode="wait" custom={dir}>
             <motion.div key={step} custom={dir} variants={slideVariants}
               initial="enter" animate="center" exit="exit"
@@ -552,7 +552,7 @@ export default function Onboarding() {
 
         {/* Botão continuar (steps 0–3) */}
         {step < 4 && (
-          <div className="px-8 py-6">
+          <div className="px-4 sm:px-8 py-4 sm:py-6">
             <motion.button
               whileHover={canNext() ? { scale: 1.02 } : {}}
               whileTap={canNext() ? { scale: 0.97 } : {}}
@@ -572,7 +572,7 @@ export default function Onboarding() {
         )}
 
         {/* Rodapé legal */}
-        <div className="px-8 pb-6 text-center space-y-1" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+        <div className="px-4 sm:px-8 pb-6 text-center space-y-1" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
           <p className="text-[10px] text-white/15 pt-4">Cortez Group · CNPJ 60.994.700/0001-70 · atendimento@cortezgroup.com.br</p>
           <div className="flex items-center justify-center gap-4">
             <Link to="/termos-de-uso" target="_blank" className="text-[10px] text-white/15 hover:text-white/40 transition-colors underline">Termos de Uso</Link>
