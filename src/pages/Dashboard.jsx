@@ -1666,15 +1666,15 @@ export default function Dashboard({ user }) {
       )}
 
       {/* Header Premium */}
-      <header className="fixed top-0 w-full z-50 glass border-b border-outline-variant pt-[max(1rem,env(safe-area-inset-top,1rem))] pb-4 px-6 flex justify-between items-center transition-all">
-        <div className="flex items-center gap-4">
-          <motion.div whileHover={{ scale: 1.1 }} className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-black shadow-lg shadow-primary/20">
+      <header className="fixed top-0 w-full z-50 glass border-b border-outline-variant pt-[max(1rem,env(safe-area-inset-top,1rem))] pb-4 px-3 sm:px-6 flex justify-between items-center transition-all">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <motion.div whileHover={{ scale: 1.1 }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-black shadow-lg shadow-primary/20 shrink-0">
             E
           </motion.div>
-          <h1 className="text-xl font-black tracking-tighter text-white">Extrato Co.</h1>
+          <h1 className="text-base sm:text-xl font-black tracking-tighter text-white whitespace-nowrap">Extrato Co.</h1>
         </div>
-        
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-1 sm:gap-2">
           <div className="hidden sm:flex flex-col items-end mr-2">
             {isTrial && trialDaysLeft !== null ? (
               <button onClick={() => navigate('/pricing')} className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full transition-all hover:opacity-80"
@@ -1690,36 +1690,36 @@ export default function Dashboard({ user }) {
           </div>
           <button
             onClick={() => { setShowMembersModal(true); fetchMembers(); }}
-            className="p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white"
+            className="hidden sm:flex p-2 sm:p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white"
             title="Membros da conta"
           >
-            <Users size={20} />
+            <Users size={18} />
           </button>
           {/* Ocultar valores */}
           <button
             onClick={toggleHideValues}
-            className="p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white"
+            className="p-2 sm:p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white"
             title={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
           >
-            {hideValues ? <EyeOff size={20} /> : <Eye size={20} />}
+            {hideValues ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
 
           {/* Tema claro / escuro */}
           <button
             onClick={toggleTheme}
-            className="p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white"
+            className="p-2 sm:p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white"
             title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
           >
-            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
           {/* Soraya IA */}
           <button
             onClick={() => canAccess('soraya') ? openSoraya() : navigate('/pricing')}
-            className="relative p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-yellow-400"
+            className="hidden sm:flex relative p-2 sm:p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-yellow-400"
             title={canAccess('soraya') ? 'Soraya IA — Sugestões' : 'Soraya IA — Plano Family Office'}
           >
-            <Lightbulb size={20} />
+            <Lightbulb size={18} />
             {suggestions.filter(s => s.status === 'new' && s.author_id !== user?.id).length > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full text-[9px] font-black text-black flex items-center justify-center">
                 {suggestions.filter(s => s.status === 'new' && s.author_id !== user?.id).length}
@@ -1727,8 +1727,8 @@ export default function Dashboard({ user }) {
             )}
           </button>
 
-          <button onClick={handleLogout} className="p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white">
-            <LogOut size={20} />
+          <button onClick={handleLogout} className="p-2 sm:p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white">
+            <LogOut size={18} />
           </button>
         </div>
       </header>
