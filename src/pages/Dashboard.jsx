@@ -151,7 +151,7 @@ const MODALITY_LABELS = {
 const ALL_CATEGORIES = Object.keys(CATEGORY_COLORS).filter(c => c !== 'Outros').sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
 // Modal para editar modalidade + categoria de uma transação
-const EditTransactionModal = ({ item, onClose, onSave }) => {
+const EditTransactionModal = ({ item, onClose, onSave, userCategories = [] }) => {
   const { theme } = useApp();
   const isLight = theme === 'light';
   const currentModality = classifyTransaction(item);
@@ -242,9 +242,11 @@ const EditTransactionModal = ({ item, onClose, onSave }) => {
               onChange={e => setCategory(e.target.value)}
               className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary/50 transition-all appearance-none ${isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-white/5 border-white/10 text-white'}`}
             >
-              {ALL_CATEGORIES.map(c => (
-                <option key={c} value={c} style={{ background: isLight ? '#f8fafc' : '#1a1f2e' }}>{c}</option>
-              ))}
+              {[...new Set([...ALL_CATEGORIES, ...userCategories])]
+                .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+                .map(c => (
+                  <option key={c} value={c} style={{ background: isLight ? '#f8fafc' : '#1a1f2e' }}>{c}</option>
+                ))}
             </select>
           ) : (
             <input
@@ -762,6 +764,7 @@ export default function Dashboard({ user }) {
   const [pluggyConnecting, setPluggyConnecting] = useState(false);
   const [pluggyToken, setPluggyToken] = useState(null);
   const [showSoraya, setShowSoraya] = useState(false);
+  const [userCategories, setUserCategories] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [newSuggestion, setNewSuggestion] = useState('');
   const [suggestionLoading, setSuggestionLoading] = useState(false);
@@ -952,6 +955,14 @@ export default function Dashboard({ user }) {
           .select('keyword, category, modality')
           .eq('user_id', resolvedUserId);
         if (rules) _userCategoryRules = rules;
+
+        // Load user custom categories
+        const { data: cats } = await supabase
+          .schema('stich_ai')
+          .from('user_categories')
+          .select('name')
+          .eq('user_id', resolvedUserId);
+        if (cats) setUserCategories(cats.map(c => c.name).sort((a, b) => a.localeCompare(b, 'pt-BR')));
       } catch (err) {
         console.warn("Supabase fetch failed:", err.message);
       }
@@ -971,6 +982,18 @@ export default function Dashboard({ user }) {
       setData(prev => prev.map(t =>
         t.id === item.id ? { ...t, category, metadata: newMetadata } : t
       ));
+
+      // Persist new custom category to DB
+      if (!ALL_CATEGORIES.includes(category) && category !== 'Outros') {
+        const userId = effectiveUserId || user?.id;
+        await supabase
+          .schema('stich_ai')
+          .from('user_categories')
+          .upsert({ user_id: userId, name: category }, { onConflict: 'user_id,name' });
+        setUserCategories(prev =>
+          prev.includes(category) ? prev : [...prev, category].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+        );
+      }
 
       if (pinRule && item.description) {
         const keyword = item.description.trim().toLowerCase().slice(0, 80);
@@ -1719,9 +1742,9 @@ export default function Dashboard({ user }) {
           <button
             onClick={() => canAccess('soraya') ? openSoraya() : navigate('/pricing')}
             className="hidden sm:flex relative p-2 sm:p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-yellow-400"
-            title={canAccess('soraya') ? 'Soraya IA — Sugestões' : 'Soraya IA — Plano Family Office'}
+            title={canAccess('soraya') ? 'Soraya IA — Sugestões' : 'Upgrade — Plano Family Office'}
           >
-            <Lightbulb size={18} />
+            <Sparkles size={18} />
             {suggestions.filter(s => s.status === 'new' && s.author_id !== user?.id).length > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full text-[9px] font-black text-black flex items-center justify-center">
                 {suggestions.filter(s => s.status === 'new' && s.author_id !== user?.id).length}
@@ -2920,6 +2943,7 @@ export default function Dashboard({ user }) {
             item={editModal}
             onClose={() => setEditModal(null)}
             onSave={handleEditSave}
+            userCategories={userCategories}
           />
         )}
       </AnimatePresence>
