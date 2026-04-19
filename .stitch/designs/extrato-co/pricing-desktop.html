@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Extrato Co. - Planos e Preços</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary": "#d0bcff",
+                      "inverse-on-surface": "#2c303d",
+                      "on-tertiary": "#482900",
+                      "on-primary-fixed": "#23005c",
+                      "inverse-primary": "#6d3bd7",
+                      "surface-container-lowest": "#0a0e1a",
+                      "surface-container-high": "#262a37",
+                      "surface-dim": "#0f131f",
+                      "primary": "#d0bcff",
+                      "outline-variant": "#494454",
+                      "surface-bright": "#353946",
+                      "on-tertiary-container": "#3f2300",
+                      "outline": "#958ea0",
+                      "on-tertiary-fixed-variant": "#673d00",
+                      "on-error-container": "#ffdad6",
+                      "tertiary": "#ffb869",
+                      "on-surface": "#dfe2f3",
+                      "on-primary": "#3c0091",
+                      "background": "#0f131f",
+                      "on-tertiary-fixed": "#2c1700",
+                      "inverse-surface": "#dfe2f3",
+                      "primary-container": "#a078ff",
+                      "surface-variant": "#313442",
+                      "on-secondary-container": "#c3adf7",
+                      "on-primary-fixed-variant": "#5516be",
+                      "surface-container": "#1b1f2c",
+                      "on-secondary-fixed": "#220b4e",
+                      "secondary-container": "#513e7f",
+                      "tertiary-fixed-dim": "#ffb869",
+                      "error-container": "#93000a",
+                      "tertiary-fixed": "#ffdcbb",
+                      "on-secondary": "#372464",
+                      "secondary-fixed": "#e9ddff",
+                      "tertiary-container": "#ca801e",
+                      "on-surface-variant": "#cbc3d7",
+                      "surface-container-highest": "#313442",
+                      "on-primary-container": "#340080",
+                      "secondary-fixed-dim": "#d0bcff",
+                      "primary-fixed": "#e9ddff",
+                      "surface-container-low": "#171b28",
+                      "on-secondary-fixed-variant": "#4e3b7c",
+                      "on-background": "#dfe2f3",
+                      "surface": "#0f131f",
+                      "error": "#ffb4ab",
+                      "primary-fixed-dim": "#d0bcff",
+                      "on-error": "#690005",
+                      "surface-tint": "#d0bcff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {},
+              "fontFamily": {
+                      "headline": [
+                              "Manrope"
+                      ],
+                      "body": [
+                              "Inter"
+                      ],
+                      "label": [
+                              "Inter"
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+</head>
+<body class="bg-surface-container-lowest text-on-surface font-body min-h-screen flex flex-col antialiased relative overflow-x-hidden">
+<!-- Ambient Glow Effects -->
+<div class="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+<div class="fixed bottom-0 right-0 w-[600px] h-[600px] bg-tertiary/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+<!-- TopAppBar from JSON -->
+<header class="bg-[#0A0E1A]/80 backdrop-blur-2xl fixed top-0 w-full z-50 shadow-[0_8px_32px_0_rgba(10,14,26,0.08)]">
+<div class="flex justify-between items-center px-8 py-4 max-w-[1440px] mx-auto">
+<div class="text-xl font-extrabold tracking-tighter text-slate-50 font-headline">Extrato Co.</div>
+<nav class="hidden md:flex gap-8 items-center">
+<a class="text-slate-400 hover:text-slate-100 transition-colors font-body text-sm hover:text-[#d0bcff] transition-all duration-300" href="#">Solutions</a>
+<a class="text-[#d0bcff] border-b-2 border-[#d0bcff] pb-1 font-body text-sm font-medium hover:text-[#d0bcff] transition-all duration-300" href="#">Pricing</a>
+<a class="text-slate-400 hover:text-slate-100 transition-colors font-body text-sm hover:text-[#d0bcff] transition-all duration-300" href="#">Private Wealth</a>
+<a class="text-slate-400 hover:text-slate-100 transition-colors font-body text-sm hover:text-[#d0bcff] transition-all duration-300" href="#">Resources</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="hidden md:block text-slate-400 hover:text-slate-100 transition-colors font-body text-sm hover:text-[#d0bcff] transition-all duration-300">Login</button>
+<button class="bg-primary text-on-primary px-6 py-2.5 rounded-full font-body font-medium text-sm hover:bg-primary-container transition-colors scale-95 active:scale-90 transition-transform">Get Started</button>
+</div>
+</div>
+</header>
+<main class="flex-grow pt-32 pb-24 px-6 relative z-10">
+<div class="max-w-[1200px] mx-auto">
+<!-- Hero Section -->
+<div class="text-center max-w-3xl mx-auto mb-16">
+<div class="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-surface-container border border-outline-variant/30 mb-6 shadow-sm">
+<span class="text-primary text-xs font-semibold tracking-wide uppercase font-label">Planos e Preços</span>
+</div>
+<h1 class="text-5xl md:text-6xl font-headline font-bold tracking-tight mb-6 leading-tight text-on-surface">
+                    Controle financeiro <br/>
+<span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary">de alto padrão</span>
+</h1>
+<p class="text-lg md:text-xl text-on-surface-variant font-body mb-10 max-w-2xl mx-auto">
+                    Inteligência preditiva real para quem leva patrimônio a sério.
+                </p>
+<!-- Billing Toggle -->
+<div class="flex items-center justify-center gap-4 font-body text-sm">
+<span class="text-on-surface-variant font-medium">Mensal</span>
+<button class="w-14 h-8 bg-surface-container-high rounded-full relative p-1 flex items-center shadow-inner border border-outline-variant/20 transition-colors">
+<div class="w-6 h-6 bg-primary rounded-full translate-x-6 shadow-sm transition-transform"></div>
+</button>
+<span class="text-on-surface font-medium flex items-center gap-2">
+                        Anual
+                        <span class="bg-tertiary/10 text-tertiary text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">2 meses grátis</span>
+</span>
+</div>
+</div>
+<!-- Pricing Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+<!-- Essencial Card -->
+<div class="bg-surface-container-low rounded-2xl p-8 relative overflow-hidden group hover:bg-surface-container transition-colors duration-300">
+<div class="absolute top-0 left-0 w-full h-1 bg-surface-bright"></div>
+<div class="mb-6">
+<span class="material-symbols-outlined text-surface-bright text-4xl mb-4 block" data-icon="account_balance_wallet">account_balance_wallet</span>
+<h3 class="text-xl font-headline font-bold text-on-surface mb-2">Essencial</h3>
+<div class="flex items-baseline gap-1">
+<span class="text-3xl font-headline font-bold text-on-surface">R$ 49</span>
+<span class="text-on-surface-variant text-sm font-body">/mês</span>
+</div>
+</div>
+<button class="w-full bg-surface-container-high text-on-surface font-body font-medium py-3 rounded-full mb-8 hover:bg-surface-bright transition-colors border border-outline-variant/20">Assinar Essencial</button>
+<ul class="space-y-4 font-body text-sm text-on-surface-variant">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-surface-bright text-sm mt-0.5" data-icon="check_circle" data-weight="fill">check_circle</span>
+                            Sincronização com 2 bancos
+                        </li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-surface-bright text-sm mt-0.5" data-icon="check_circle" data-weight="fill">check_circle</span>
+                            Categorização automática básica
+                        </li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-surface-bright text-sm mt-0.5" data-icon="check_circle" data-weight="fill">check_circle</span>
+                            Relatórios mensais em PDF
+                        </li>
+</ul>
+</div>
+<!-- Private Card (Highlighted) -->
+<div class="bg-surface-container-high rounded-2xl p-8 relative overflow-hidden shadow-[0_16px_64px_rgba(208,188,255,0.08)] border border-primary/20 transform md:-translate-y-4">
+<div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-primary-container"></div>
+<div class="absolute top-0 right-8 bg-primary text-on-primary text-xs font-bold px-3 py-1 rounded-b-lg uppercase tracking-wide">Mais Popular</div>
+<div class="mb-6 mt-4">
+<span class="material-symbols-outlined text-primary text-4xl mb-4 block" data-icon="diamond">diamond</span>
+<h3 class="text-xl font-headline font-bold text-on-surface mb-2">Private</h3>
+<div class="flex items-baseline gap-1">
+<span class="text-4xl font-headline font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary-container">R$ 197</span>
+<span class="text-on-surface-variant text-sm font-body">/mês</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-2 font-body">Cobrado anualmente (R$ 2.364)</p>
+</div>
+<button class="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-body font-bold py-3 rounded-full mb-8 hover:opacity-90 transition-opacity shadow-[0_8px_16px_rgba(208,188,255,0.2)]">Assinar Private</button>
+<ul class="space-y-4 font-body text-sm text-on-surface">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-sm mt-0.5" data-icon="check_circle" data-weight="fill">check_circle</span>
+                            Bancos ilimitados &amp; Corretoras
+                        </li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-sm mt-0.5" data-icon="check_circle" data-weight="fill">check_circle</span>
+                            Inteligência Preditiva de Caixa
+                        </li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-sm mt-0.5" data-icon="check_circle" data-weight="fill">check_circle</span>
+                            Consolidação de Carteira Global
+                        </li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-sm mt-0.5" data-icon="check_circle" data-weight="fill">check_circle</span>
+                            Acesso via API Premium
+                        </li>
+<li class="flex items-start gap-3 text-on-surface-variant opacity-60 line-through">
+<span class="material-symbols-outlined text-outline text-sm mt-0.5" data-icon="close">close</span>
+                            Consultoria Fiscal Dedicada
+                        </li>
+</ul>
+</div>
+<!-- Family Office Card -->
+<div class="bg-surface-container-low rounded-2xl p-8 relative overflow-hidden group hover:bg-surface-container transition-colors duration-300">
+<div class="absolute top-0 left-0 w-full h-1 bg-tertiary"></div>
+<div class="mb-6">
+<span class="material-symbols-outlined text-tertiary text-4xl mb-4 block" data-icon="corporate_fare">corporate_fare</span>
+<h3 class="text-xl font-headline font-bold text-on-surface mb-2">Family Office</h3>
+<div class="flex items-baseline gap-1">
+<span class="text-3xl font-headline font-bold text-on-surface">R$ 497</span>
+<span class="text-on-surface-variant text-sm font-body">/mês</span>
+</div>
+</div>
+<button class="w-full bg-transparent border border-tertiary/50 text-tertiary font-body font-medium py-3 rounded-full mb-8 hover:bg-tertiary/10 transition-colors">Falar com Consultor</button>
+<ul class="space-y-4 font-body text-sm text-on-surface-variant">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-tertiary text-sm mt-0.5" data-icon="check_circle" data-weight="fill">check_circle</span>
+                            Tudo do plano Private
+                        </li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-tertiary text-sm mt-0.5" data-icon="check_circle" data-weight="fill">check_circle</span>
+                            Múltiplos CNPJs &amp; Holdings
+                        </li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-tertiary text-sm mt-0.5" data-icon="check_circle" data-weight="fill">check_circle</span>
+                            Consultoria Fiscal Dedicada
+                        </li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-tertiary text-sm mt-0.5" data-icon="check_circle" data-weight="fill">check_circle</span>
+                            SLA de suporte de 1 hora
+                        </li>
+</ul>
+</div>
+</div>
+<!-- Trust Bar -->
+<div class="mt-24 pt-8 border-t border-outline-variant/10 flex flex-wrap justify-center gap-8 md:gap-16 font-body text-sm text-on-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-lg" data-icon="verified_user">verified_user</span>
+                    Pagamentos via Stripe
+                </div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-lg" data-icon="lock">lock</span>
+                    Criptografia Bank-Grade
+                </div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-lg" data-icon="event_busy">event_busy</span>
+                    Cancele quando quiser
+                </div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-lg" data-icon="headset_mic">headset_mic</span>
+                    Suporte VIP 24/7
+                </div>
+</div>
+</div>
+</main>
+<!-- Footer from JSON -->
+<footer class="bg-[#0A0E1A] w-full mt-auto">
+<div class="w-full px-12 py-16 flex flex-col md:flex-row justify-between items-center gap-6 max-w-[1440px] mx-auto">
+<div class="text-slate-50 font-manrope font-black text-lg">Extrato Co.</div>
+<nav class="flex gap-6 font-inter text-xs tracking-wide uppercase">
+<a class="text-slate-500 hover:text-violet-400 transition-colors underline-offset-4 hover:underline" href="#">Privacy</a>
+<a class="text-slate-500 hover:text-violet-400 transition-colors underline-offset-4 hover:underline" href="#">Security</a>
+<a class="text-slate-500 hover:text-violet-400 transition-colors underline-offset-4 hover:underline" href="#">Terms</a>
+<a class="text-slate-500 hover:text-violet-400 transition-colors underline-offset-4 hover:underline" href="#">Compliance</a>
+</nav>
+<div class="font-inter text-xs tracking-wide uppercase text-slate-500">
+                © 2024 Extrato Co. Midnight Ledger Series.
+            </div>
+</div>
+</footer>
+</body></html>
