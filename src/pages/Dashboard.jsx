@@ -1120,7 +1120,7 @@ export default function Dashboard({ user }) {
       }
       setPluggyToken(connectToken);
     } catch (err) {
-      setToast({ message: 'Erro ao conectar banco. Tente novamente.', type: 'error' });
+      setToast({ message: `Erro: ${err?.message || String(err)}`, type: 'error' });
       setPluggyConnecting(false);
     }
   };
