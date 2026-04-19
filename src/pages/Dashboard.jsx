@@ -152,6 +152,8 @@ const ALL_CATEGORIES = Object.keys(CATEGORY_COLORS).filter(c => c !== 'Outros');
 
 // Modal para editar modalidade + categoria de uma transação
 const EditTransactionModal = ({ item, onClose, onSave }) => {
+  const { theme } = useApp();
+  const isLight = theme === 'light';
   const currentModality = classifyTransaction(item);
   const currentCat = smartCategory(item);
 
@@ -186,24 +188,24 @@ const EditTransactionModal = ({ item, onClose, onSave }) => {
         initial={{ opacity: 0, scale: 0.92, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92, y: 20 }}
-        className="relative z-10 w-full max-w-sm bg-[#1a1f2e] border border-white/10 rounded-3xl p-6 shadow-2xl"
+        className={`relative z-10 w-full max-w-sm border rounded-3xl p-5 sm:p-6 shadow-2xl ${isLight ? 'bg-white border-slate-200' : 'bg-[#1a1f2e] border-white/10'}`}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div className="flex-1 min-w-0 pr-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-1">Editar Transação</p>
-            <p className="text-sm font-bold text-white leading-snug line-clamp-2">{item.description}</p>
-            <p className="text-xs text-white/40 mt-0.5">{formatDate(item.transaction_date)}</p>
+            <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${isLight ? 'text-slate-400' : 'text-white/40'}`}>Editar Transação</p>
+            <p className={`text-sm font-bold leading-snug line-clamp-2 ${isLight ? 'text-slate-800' : 'text-white'}`}>{item.description}</p>
+            <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-400' : 'text-white/40'}`}>{formatDate(item.transaction_date)}</p>
           </div>
-          <button onClick={onClose} className="shrink-0 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-all">
+          <button onClick={onClose} className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-500' : 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white'}`}>
             <X size={14} />
           </button>
         </div>
 
         {/* Modalidade */}
         <div className="mb-4">
-          <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">Modalidade</p>
+          <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${isLight ? 'text-slate-400' : 'text-white/40'}`}>Modalidade</p>
           <div className="grid grid-cols-2 gap-2">
             {Object.entries(MODALITY_LABELS).map(([key, label]) => {
               const colors = {
@@ -219,7 +221,9 @@ const EditTransactionModal = ({ item, onClose, onSave }) => {
                   className="px-3 py-2 rounded-xl text-xs font-bold transition-all border"
                   style={modality === key
                     ? { background: colors.bg, borderColor: colors.border, color: colors.text }
-                    : { background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }
+                    : isLight
+                      ? { background: 'rgba(0,0,0,0.04)', borderColor: 'rgba(0,0,0,0.12)', color: 'rgba(15,23,42,0.5)' }
+                      : { background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }
                   }
                 >
                   {label}
@@ -231,15 +235,15 @@ const EditTransactionModal = ({ item, onClose, onSave }) => {
 
         {/* Categoria */}
         <div className="mb-4">
-          <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">Categoria</p>
+          <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${isLight ? 'text-slate-400' : 'text-white/40'}`}>Categoria</p>
           {!showCustom ? (
             <select
               value={category}
               onChange={e => setCategory(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-primary/50 transition-all appearance-none"
+              className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary/50 transition-all appearance-none ${isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-white/5 border-white/10 text-white'}`}
             >
               {ALL_CATEGORIES.map(c => (
-                <option key={c} value={c} style={{ background: '#1a1f2e' }}>{c}</option>
+                <option key={c} value={c} style={{ background: isLight ? '#f8fafc' : '#1a1f2e' }}>{c}</option>
               ))}
             </select>
           ) : (
@@ -249,7 +253,7 @@ const EditTransactionModal = ({ item, onClose, onSave }) => {
               value={customCategory}
               onChange={e => setCustomCategory(e.target.value)}
               autoFocus
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-primary/50 transition-all placeholder:text-white/20"
+              className={`w-full border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-primary/50 transition-all ${isLight ? 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400' : 'bg-white/5 border-white/10 text-white placeholder:text-white/20'}`}
             />
           )}
           <button
@@ -262,18 +266,18 @@ const EditTransactionModal = ({ item, onClose, onSave }) => {
 
         {/* Fixar regra */}
         <label className="flex items-start gap-3 cursor-pointer mb-5 group">
-          <div className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all ${pinRule ? 'bg-primary border-primary' : 'border-white/20 bg-white/5'}`} onClick={() => setPinRule(v => !v)}>
+          <div className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all ${pinRule ? 'bg-primary border-primary' : isLight ? 'border-slate-300 bg-slate-100' : 'border-white/20 bg-white/5'}`} onClick={() => setPinRule(v => !v)}>
             {pinRule && <Check size={10} className="text-white" />}
           </div>
           <div>
-            <p className="text-xs font-semibold text-white/70 group-hover:text-white transition-colors">Fixar para transações com esta descrição</p>
-            <p className="text-[10px] text-white/30 mt-0.5">Aplicar automaticamente em futuras importações</p>
+            <p className={`text-xs font-semibold transition-colors ${isLight ? 'text-slate-600 group-hover:text-slate-900' : 'text-white/70 group-hover:text-white'}`}>Fixar para transações com esta descrição</p>
+            <p className={`text-[10px] mt-0.5 ${isLight ? 'text-slate-400' : 'text-white/30'}`}>Aplicar automaticamente em futuras importações</p>
           </div>
         </label>
 
         {/* Botões */}
         <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-all">
+          <button onClick={onClose} className={`flex-1 py-2.5 rounded-xl text-sm font-bold border transition-all ${isLight ? 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white'}`}>
             Cancelar
           </button>
           <button
