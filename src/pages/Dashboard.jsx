@@ -1113,7 +1113,8 @@ export default function Dashboard({ user }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user?.id }),
       });
-      const { connectToken, error } = await res.json();
+      const text = await res.text();
+      const { connectToken, error } = text ? JSON.parse(text) : {};
       if (!connectToken || error) {
         setToast({ message: 'Erro ao iniciar conexão bancária.', type: 'error' });
         setPluggyConnecting(false);
