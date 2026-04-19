@@ -148,7 +148,7 @@ const MODALITY_LABELS = {
   savings_out: 'Aplicação',
   savings_in:  'Resgate',
 };
-const ALL_CATEGORIES = Object.keys(CATEGORY_COLORS).filter(c => c !== 'Outros');
+const ALL_CATEGORIES = Object.keys(CATEGORY_COLORS).filter(c => c !== 'Outros').sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
 // Modal para editar modalidade + categoria de uma transação
 const EditTransactionModal = ({ item, onClose, onSave }) => {
