@@ -1,10 +1,20 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
   const [theme, setTheme] = useState(() => localStorage.getItem('ec_theme') || 'dark');
   const [hideValues, setHideValues] = useState(() => localStorage.getItem('ec_hide') === 'true');
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -21,7 +31,7 @@ export function AppProvider({ children }) {
   const toggleHideValues = () => setHideValues(v => !v);
 
   return (
-    <AppContext.Provider value={{ theme, toggleTheme, hideValues, toggleHideValues }}>
+    <AppContext.Provider value={{ theme, toggleTheme, hideValues, toggleHideValues, user }}>
       {children}
     </AppContext.Provider>
   );

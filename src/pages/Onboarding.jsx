@@ -244,8 +244,9 @@ export default function Onboarding() {
         navigate('/dashboard');
       } else {
         const base = STRIPE_LINKS[planId];
+        const ref = encodeURIComponent(`${userId}__${planId}`);
         window.location.href = base && base !== '#'
-          ? `${base}?prefilled_email=${encodeURIComponent(form.email)}`
+          ? `${base}?prefilled_email=${encodeURIComponent(form.email)}&client_reference_id=${ref}`
           : '/dashboard';
       }
     } catch (err) {
