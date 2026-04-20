@@ -3622,10 +3622,10 @@ export default function Dashboard({ user }) {
               <div className="flex items-center gap-2">
                 <span className="text-xl">🔥</span>
                 <div>
-                  <p className="text-xs font-black text-white leading-tight">
+                  <p className="text-sm font-black leading-tight" style={{ color: '#ffffff' }}>
                     {streak} {streak === 1 ? 'dia' : 'dias'} seguidos!
                   </p>
-                  <p className="text-[10px] text-white/40 leading-tight">
+                  <p className="text-[11px] leading-tight" style={{ color: 'rgba(255,255,255,0.65)' }}>
                     {streak === 1 ? 'Você começou hoje. Continue amanhã!' : 'Incrível consistência. Não quebre agora.'}
                   </p>
                 </div>
@@ -3633,21 +3633,21 @@ export default function Dashboard({ user }) {
 
               {/* Próxima recompensa */}
               <div className="rounded-xl p-3 flex flex-col gap-2"
-                style={{ background: `${sColor}12`, border: `1px solid ${sColor}25` }}>
+                style={{ background: `${sColor}18`, border: `1px solid ${sColor}50` }}>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Próxima recompensa</span>
-                  <span className="text-[10px] font-black" style={{ color: sColor }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.55)' }}>Próxima recompensa</span>
+                  <span className="text-[11px] font-black" style={{ color: sColor }}>
                     {daysLeft === 0 ? 'Hoje!' : `${daysLeft} ${daysLeft === 1 ? 'dia' : 'dias'}`}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">{nextM.icon}</span>
                   <div className="min-w-0">
-                    <p className="text-xs font-black text-white leading-tight">{nextM.reward}</p>
-                    <p className="text-[10px] text-white/40 leading-snug">{nextM.desc}</p>
+                    <p className="text-sm font-black leading-tight" style={{ color: '#ffffff' }}>{nextM.reward}</p>
+                    <p className="text-[11px] leading-snug" style={{ color: 'rgba(255,255,255,0.60)' }}>{nextM.desc}</p>
                   </div>
                 </div>
-                <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.12)' }}>
                   <motion.div
                     className="h-full rounded-full"
                     initial={{ width: 0 }}
@@ -3656,18 +3656,18 @@ export default function Dashboard({ user }) {
                     style={{ background: sColor }}
                   />
                 </div>
-                <p className="text-[9px] text-white/30 text-right">
-                  {streak}/{nextM.days} dias — {segPct}%
+                <p className="text-[10px] text-right" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  {streak} / {nextM.days} dias — {segPct}%
                 </p>
               </div>
 
               {/* CTA — Investment */}
-              <div className="flex items-center gap-2 rounded-xl p-2.5"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <span className="text-base">📅</span>
-                <p className="text-[10px] text-white/60 leading-snug">
-                  <span className="font-bold text-white/80">Volte amanhã</span> para manter sua série e desbloquear{' '}
-                  <span style={{ color: sColor }} className="font-bold">{nextM.reward}</span>.
+              <div className="flex items-center gap-2 rounded-xl p-3"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.10)' }}>
+                <span className="text-base shrink-0">📅</span>
+                <p className="text-[11px] leading-snug" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                  <span className="font-bold" style={{ color: '#ffffff' }}>Volte amanhã</span> para manter sua série e desbloquear{' '}
+                  <span className="font-bold" style={{ color: sColor }}>{nextM.reward}</span>.
                 </p>
               </div>
             </motion.div>
