@@ -452,6 +452,17 @@ const EditTransactionModal = ({ item, onClose, onSave, userCategories = [], user
 const CategoryChart = ({ chartData, onCategoryClick, selectedCategories, colorMap = CATEGORY_COLORS }) => {
   const [hovered, setHovered] = React.useState(null);
   const [showAll, setShowAll] = React.useState(false);
+  const { theme: _t, plan } = useApp();
+  const isLight = _t === 'light';
+  const isWarmTheme = plan === 'family_office';
+
+  const textMain   = isLight ? (isWarmTheme ? '#3d2008' : '#0f172a') : '#ffffff';
+  const textMuted  = isLight ? (isWarmTheme ? '#7c4a2d' : '#64748b') : 'rgba(255,255,255,0.50)';
+  const textFaint  = isLight ? (isWarmTheme ? 'rgba(61,32,8,0.35)'  : 'rgba(15,23,42,0.35)') : 'rgba(255,255,255,0.25)';
+  const hoverBg    = isLight ? (isWarmTheme ? 'rgba(124,74,45,0.07)' : 'rgba(14,165,233,0.06)') : 'rgba(255,255,255,0.05)';
+  const barTrack   = isLight ? (isWarmTheme ? 'rgba(124,74,45,0.12)' : 'rgba(15,23,42,0.10)') : 'rgba(255,255,255,0.07)';
+  const btnBg      = isLight ? (isWarmTheme ? 'rgba(124,74,45,0.10)' : 'rgba(15,23,42,0.07)') : 'rgba(255,255,255,0.06)';
+
   const total    = chartData.reduce((s, d) => s + d.value, 0);
   const maxValue = chartData[0]?.value || 1;
   const visible  = showAll ? chartData : chartData.slice(0, 6);
@@ -466,16 +477,16 @@ const CategoryChart = ({ chartData, onCategoryClick, selectedCategories, colorMa
     <div className="glass-card p-4 sm:p-6 rounded-[2.5rem]">
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h3 className="font-black text-lg text-white leading-tight">Categorias</h3>
-          <p className="text-[11px] text-on-surface-variant mt-0.5">
+          <h3 className="font-black text-lg leading-tight" style={{ color: textMain }}>Categorias</h3>
+          <p className="text-[11px] mt-0.5" style={{ color: textMuted }}>
             Total · R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </p>
         </div>
         {chartData.length > 6 && (
           <button onClick={() => setShowAll(v => !v)}
             className="text-[11px] font-bold px-3 py-1.5 rounded-full"
-            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>
-            {showAll ? 'Menos' : }
+            style={{ background: btnBg, color: textMuted }}>
+            {showAll ? 'Menos' : `+${chartData.length - 6} mais`}
           </button>
         )}
       </div>
@@ -492,43 +503,43 @@ const CategoryChart = ({ chartData, onCategoryClick, selectedCategories, colorMa
               transition={{ duration: 0.22, delay: i * 0.04 }}
               className="group relative flex items-center gap-3 px-3 py-2.5 rounded-2xl cursor-pointer select-none"
               style={{
-                background: isActive ?  : isHov ? 'rgba(255,255,255,0.05)' : 'transparent',
-                outline: isActive ?  : 'none',
+                background: isActive ? `${color}15` : isHov ? hoverBg : 'transparent',
+                outline: isActive ? `1px solid ${color}40` : 'none',
               }}
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
               onClick={() => onCategoryClick?.(item.name)}
             >
               <span className="text-[11px] font-black w-4 text-right shrink-0 tabular-nums"
-                style={{ color: i === 0 ? color : 'rgba(255,255,255,0.2)' }}>{i + 1}</span>
+                style={{ color: i === 0 ? color : textFaint }}>{i + 1}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-semibold truncate"
-                    style={{ color: isHov || isActive ? '#ffffff' : 'rgba(255,255,255,0.75)' }}>
+                    style={{ color: isHov || isActive ? textMain : textMuted }}>
                     {item.name}
                   </span>
                   <div className="flex items-center gap-2.5 shrink-0 ml-2">
                     {isHov && (
                       <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                        className="text-[10px]" style={{ color: textFaint }}>
                         {item.count} tx
                       </motion.span>
                     )}
-                    <span className="text-xs font-bold text-white tabular-nums">
+                    <span className="text-xs font-bold tabular-nums" style={{ color: textMain }}>
                       R$ {item.value.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
                     </span>
                     <span className="text-[10px] font-bold w-9 text-right tabular-nums"
-                      style={{ color: isHov || isActive ? color : 'rgba(255,255,255,0.35)' }}>
+                      style={{ color: isHov || isActive ? color : textFaint }}>
                       {pct.toFixed(1)}%
                     </span>
                   </div>
                 </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: barTrack }}>
                   <motion.div className="h-full rounded-full"
                     initial={{ width: 0 }}
-                    animate={{ width:  }}
+                    animate={{ width: `${barPct}%` }}
                     transition={{ duration: 0.55, ease: 'easeOut', delay: i * 0.05 }}
-                    style={{ background: isHov || isActive ? color :  }}
+                    style={{ background: isHov || isActive ? color : `${color}80` }}
                   />
                 </div>
               </div>
@@ -2384,23 +2395,39 @@ export default function Dashboard({ user }) {
 
         {/* ── Conquistas ── */}
         {(() => {
-          const earnedCount = BADGES_DEF.filter(b => unlockedBadges[b.id]).length;
+          const { theme: _t } = useApp();
+          const isLightMode = _t === 'light';
+          const accent = isWarm ? '#e8a020' : '#0ea5e9';
+          // cores adaptadas ao tema
+          const cardBg      = isLightMode ? (isWarm ? 'rgba(232,160,32,0.06)' : 'rgba(14,165,233,0.05)') : 'rgba(255,255,255,0.03)';
+          const cardBdr     = isLightMode ? (isWarm ? 'rgba(124,74,45,0.18)'  : 'rgba(14,165,233,0.15)') : 'rgba(255,255,255,0.06)';
+          const textMain    = isLightMode ? (isWarm ? '#3d2008' : '#0f172a')   : '#ffffff';
+          const textMuted   = isLightMode ? (isWarm ? '#7c4a2d' : '#64748b')   : 'rgba(255,255,255,0.40)';
+          const iconLocked  = isLightMode ? 'rgba(0,0,0,0.18)'                 : 'rgba(255,255,255,0.18)';
+          const iconLockBg  = isLightMode ? 'rgba(0,0,0,0.05)'                 : 'rgba(255,255,255,0.05)';
+          const iconLockBdr = isLightMode ? 'rgba(0,0,0,0.08)'                 : 'rgba(255,255,255,0.08)';
+          const nameLocked  = isLightMode ? 'rgba(0,0,0,0.25)'                 : 'rgba(255,255,255,0.20)';
+          const nextBg      = isLightMode ? 'rgba(0,0,0,0.04)'                 : 'rgba(255,255,255,0.04)';
+          const nextBdr     = isLightMode ? 'rgba(0,0,0,0.08)'                 : 'rgba(255,255,255,0.07)';
+
+          const earnedCount  = BADGES_DEF.filter(b => unlockedBadges[b.id]).length;
           const visibleBadges = showAllBadges ? BADGES_DEF : BADGES_DEF.slice(0, 4);
           return (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
               className="glass-card rounded-[1.75rem] p-4 flex flex-col gap-3">
+
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-black text-sm text-white">Conquistas</h3>
+                  <h3 className="font-black text-sm" style={{ color: textMain }}>Conquistas</h3>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                    style={{ background: `${isWarm ? '#e8a020' : '#0ea5e9'}20`, color: isWarm ? '#e8a020' : '#0ea5e9' }}>
+                    style={{ background: `${accent}20`, color: accent }}>
                     {earnedCount}/{BADGES_DEF.length}
                   </span>
                 </div>
                 <button onClick={() => setShowAllBadges(v => !v)}
                   className="text-[10px] font-bold transition-colors"
-                  style={{ color: isWarm ? '#e8a020' : '#0ea5e9' }}>
+                  style={{ color: accent }}>
                   {showAllBadges ? 'Menos' : 'Ver todas'}
                 </button>
               </div>
@@ -2408,34 +2435,32 @@ export default function Dashboard({ user }) {
               {/* Grid de badges */}
               <div className="grid grid-cols-4 gap-2">
                 {visibleBadges.map(badge => {
-                  const earned = !!unlockedBadges[badge.id];
+                  const earned      = !!unlockedBadges[badge.id];
                   const rarityColor = BADGE_RARITY_COLOR[badge.rarity];
-                  const { Icon } = badge;
+                  const { Icon }    = badge;
                   return (
                     <motion.div key={badge.id}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.96 }}
+                      whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }}
                       className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-2xl relative overflow-hidden cursor-default"
                       style={{
-                        background: earned ? `${rarityColor}12` : 'rgba(255,255,255,0.03)',
-                        border: `1px solid ${earned ? rarityColor + '35' : 'rgba(255,255,255,0.06)'}`,
+                        background: earned ? `${rarityColor}12` : cardBg,
+                        border: `1px solid ${earned ? rarityColor + '35' : cardBdr}`,
                       }}
                     >
                       {earned && (
                         <div className="absolute inset-0 pointer-events-none"
-                          style={{ background: `radial-gradient(ellipse at 50% 0%, ${rarityColor}15, transparent 70%)` }} />
+                          style={{ background: `radial-gradient(ellipse at 50% 0%, ${rarityColor}18, transparent 70%)` }} />
                       )}
-                      {/* Ícone */}
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center"
                         style={{
-                          background: earned ? `${rarityColor}20` : 'rgba(255,255,255,0.05)',
-                          border: `1px solid ${earned ? rarityColor + '40' : 'rgba(255,255,255,0.08)'}`,
+                          background: earned ? `${rarityColor}20` : iconLockBg,
+                          border: `1px solid ${earned ? rarityColor + '40' : iconLockBdr}`,
                         }}>
                         <Icon size={16} strokeWidth={1.75}
-                          style={{ color: earned ? rarityColor : 'rgba(255,255,255,0.2)' }} />
+                          style={{ color: earned ? rarityColor : iconLocked }} />
                       </div>
                       <span className="text-[9px] font-semibold text-center leading-tight line-clamp-2 px-0.5"
-                        style={{ color: earned ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.2)' }}>
+                        style={{ color: earned ? textMain : nameLocked }}>
                         {badge.name}
                       </span>
                     </motion.div>
@@ -2443,21 +2468,21 @@ export default function Dashboard({ user }) {
                 })}
               </div>
 
-              {/* Próximo badge a desbloquear */}
+              {/* Próxima conquista */}
               {(() => {
                 const next = BADGES_DEF.find(b => !unlockedBadges[b.id]);
                 if (!next) return (
-                  <p className="text-[10px] text-center font-bold" style={{ color: isWarm ? '#e8a020' : '#10b981' }}>
-                    🎉 Todas as conquistas desbloqueadas!
+                  <p className="text-[10px] text-center font-bold" style={{ color: accent }}>
+                    Todas as conquistas desbloqueadas!
                   </p>
                 );
                 return (
                   <div className="flex items-center gap-2 rounded-xl px-3 py-2"
-                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <next.Icon size={16} strokeWidth={1.75} style={{ color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
+                    style={{ background: nextBg, border: `1px solid ${nextBdr}` }}>
+                    <next.Icon size={16} strokeWidth={1.75} style={{ color: textMuted, flexShrink: 0 }} />
                     <div className="min-w-0">
-                      <p className="text-[10px] font-bold text-white/50 leading-tight">Próxima conquista</p>
-                      <p className="text-[11px] font-black text-white leading-tight">{next.name}</p>
+                      <p className="text-[10px] font-bold leading-tight" style={{ color: textMuted }}>Próxima conquista</p>
+                      <p className="text-[11px] font-black leading-tight" style={{ color: textMain }}>{next.name}</p>
                     </div>
                     <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0"
                       style={{ background: `${BADGE_RARITY_COLOR[next.rarity]}20`, color: BADGE_RARITY_COLOR[next.rarity] }}>
