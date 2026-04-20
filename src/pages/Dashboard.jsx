@@ -677,7 +677,7 @@ const GoalAddModal = ({ onClose, onSave, userPlan = 'free' }) => {
         style={{ background: bg, border: `1px solid ${accent}30` }}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-black text-lg" style={{ color: textMain }}>Nova Meta</h3>
+          <h3 className="font-black text-lg" style={{ color: textMain }}>Nova Missão</h3>
           <button onClick={onClose} style={{ color: textSub }}><X size={20} /></button>
         </div>
 
@@ -734,7 +734,7 @@ const GoalAddModal = ({ onClose, onSave, userPlan = 'free' }) => {
         <button onClick={handleSave} disabled={saving}
           className="w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95 disabled:opacity-60"
           style={{ background: accent, color: '#ffffff' }}>
-          {saving ? 'Salvando…' : 'Criar Meta'}
+          {saving ? 'Salvando…' : 'Criar Missão'}
         </button>
       </motion.div>
     </div>
@@ -2226,11 +2226,11 @@ export default function Dashboard({ user }) {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
             className="glass-card rounded-[1.75rem] p-4 flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-black text-sm text-white">Metas do mês</h3>
+              <h3 className="font-black text-sm text-white">Missões</h3>
               <button onClick={() => setShowGoalModal(true)}
                 className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full transition-all active:scale-95"
                 style={{ background: `${isWarm ? '#e8a020' : '#0ea5e9'}18`, color: isWarm ? '#e8a020' : '#0ea5e9', border: `1px solid ${isWarm ? '#e8a020' : '#0ea5e9'}30` }}>
-                <Plus size={12} /> Meta
+                <Plus size={12} /> Missão
               </button>
             </div>
             {goals.filter(g => g.status === 'active' || g.status === 'done').map(goal => {
@@ -2279,8 +2279,8 @@ export default function Dashboard({ user }) {
               <span className="text-xl">🎯</span>
             </div>
             <div>
-              <p className="text-sm font-bold text-white">Defina uma meta financeira</p>
-              <p className="text-[11px] text-white/40">Acompanhe seu progresso mês a mês</p>
+              <p className="text-sm font-bold text-white">Crie sua primeira missão</p>
+              <p className="text-[11px] text-white/40">Defina objetivos e acompanhe em tempo real</p>
             </div>
             <Plus size={16} className="ml-auto shrink-0 text-white/40" />
           </motion.button>
