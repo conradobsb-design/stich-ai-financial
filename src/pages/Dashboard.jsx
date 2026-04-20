@@ -1757,23 +1757,22 @@ export default function Dashboard({ user }) {
             <div className="glass px-2 py-1 rounded-xl flex items-center border border-outline-variant gap-1">
               <Calendar className="text-primary shrink-0" size={13} />
               <select
-                className="bg-transparent border-none text-white font-black text-[11px] focus:ring-0 cursor-pointer appearance-none min-w-0 w-[5.5rem]"
+                className="bg-transparent border-none text-white font-black text-[11px] focus:ring-0 cursor-pointer min-w-0 w-[5rem]"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
               >
                 {availableMonths.map(m => <option key={m} value={m} className="bg-surface">{formatMonthShort(m)}</option>)}
               </select>
-              <ChevronDown size={11} className="text-white/40 shrink-0 -ml-1" />
             </div>
           )}
 
-          {/* Bell — Soraya notifications */}
+          {/* Soraya IA — lâmpada de sugestões */}
           <button
             onClick={() => canAccess('soraya') ? openSoraya() : navigate('/pricing')}
             className="relative p-2 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-yellow-400"
-            title={canAccess('soraya') ? 'Soraya IA' : 'Upgrade'}
+            title={canAccess('soraya') ? 'Soraya IA — Sugestões' : 'Upgrade para Family Office'}
           >
-            <Bell size={17} />
+            <Lightbulb size={17} />
             {suggestions.filter(s => s.status === 'new' && s.author_id !== user?.id).length > 0 && (
               <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-yellow-400 rounded-full text-[8px] font-black text-black flex items-center justify-center">
                 {suggestions.filter(s => s.status === 'new' && s.author_id !== user?.id).length}
