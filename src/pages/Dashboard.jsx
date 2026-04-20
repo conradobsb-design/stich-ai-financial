@@ -17,7 +17,8 @@ import {
   MessageSquare, Send, Bot, ChevronDown, Landmark,
   SlidersHorizontal, ArrowUp, ArrowDown, Upload,
   CheckCircle, Archive, Clock,
-  Home, LayoutList, BarChart2, User, Bell, Settings, Lock, HelpCircle
+  Home, LayoutList, BarChart2, User, Bell, Settings, Lock, HelpCircle,
+  Crown, Star, TrendingUp as TrendUpIcon, BrainCircuit
 } from 'lucide-react';
 import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 import { useSEO } from '../hooks/useSEO';
@@ -736,6 +737,38 @@ function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, u
   );
 }
 
+// ── Plan themes ────────────────────────────────────────────
+const PLAN_THEMES = {
+  free:          { color: '#64748b', colorLight: '#94a3b8', Icon: null,       label: 'Gratuito',      glow: 'rgba(100,116,139,0.4)' },
+  essencial:     { color: '#0ea5e9', colorLight: '#38bdf8', Icon: Zap,        label: 'Essencial',     glow: 'rgba(14,165,233,0.5)'  },
+  private:       { color: '#820AD1', colorLight: '#a855f7', Icon: Shield,     label: 'Private',       glow: 'rgba(130,10,209,0.55)' },
+  family_office: { color: '#e8a020', colorLight: '#f0c040', Icon: Crown,      label: 'Family Office', glow: 'rgba(232,160,32,0.55)' },
+};
+
+// Small badge shown next to premium feature headers
+function PlanBadge({ requiredPlan, currentPlan }) {
+  const theme = PLAN_THEMES[requiredPlan];
+  if (!theme?.Icon) return null;
+  const Icon = theme.Icon;
+  const hasAccess = (PLAN_THEMES[currentPlan] ? Object.keys(PLAN_THEMES).indexOf(currentPlan) : 0)
+    >= Object.keys(PLAN_THEMES).indexOf(requiredPlan);
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider shrink-0"
+      style={{
+        background: `${theme.color}18`,
+        border: `1px solid ${theme.color}50`,
+        color: theme.color,
+        boxShadow: hasAccess ? `0 0 8px ${theme.color}30` : 'none',
+        opacity: hasAccess ? 1 : 0.7,
+      }}
+    >
+      <Icon size={8} />
+      {theme.label}
+    </span>
+  );
+}
+
 export default function Dashboard({ user }) {
   useSEO({ title: 'Painel', description: '', noindex: true });
   const { theme, toggleTheme, hideValues, toggleHideValues } = useApp();
@@ -750,6 +783,12 @@ export default function Dashboard({ user }) {
   const navigate = useNavigate();
 
   const { canAccess, plan: userPlan, isTrial, trialDaysLeft } = useSubscription(user?.id);
+
+  // Apply plan-based palette to CSS custom properties
+  useEffect(() => {
+    if (userPlan) document.documentElement.dataset.plan = userPlan;
+    return () => { delete document.documentElement.dataset.plan; };
+  }, [userPlan]);
 
   const [activeTab, setActiveTab] = useState('inicio');
 
@@ -2028,11 +2067,18 @@ export default function Dashboard({ user }) {
 
                 return (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20 flex items-center gap-1.5">
-                        <Zap size={9} /> Projeções
-                      </p>
-                      <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full border ${
+                    <div className="flex items-center justify-between mb-3 gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
+                          style={{ background: `${PLAN_THEMES.private.color}18`, border: `1px solid ${PLAN_THEMES.private.color}40` }}>
+                          <TrendUpIcon size={13} style={{ color: PLAN_THEMES.private.color }} />
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/70 flex items-center gap-2">
+                          Projeções
+                          <PlanBadge requiredPlan="private" currentPlan={userPlan} />
+                        </p>
+                      </div>
+                      <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
                         usingProphet
                           ? 'text-violet-400 border-violet-400/30 bg-violet-400/10'
                           : 'text-white/20 border-white/10 bg-transparent'
@@ -2092,7 +2138,16 @@ export default function Dashboard({ user }) {
           {/* New Component: Health Gauge */}
           <motion.div variants={itemVariants} className="md:col-span-4 glass-card rounded-[2.5rem] p-4 sm:p-6 md:p-8 flex flex-col border-t border-t-white/10 shadow-2xl">
             <div className="flex flex-col items-center justify-center mb-4">
-              <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-widest mb-4">Saúde Financeira</h3>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: `${PLAN_THEMES.family_office.color}18`, border: `1px solid ${PLAN_THEMES.family_office.color}40` }}>
+                  <Crown size={13} style={{ color: PLAN_THEMES.family_office.color }} />
+                </div>
+                <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
+                  Saúde Financeira
+                  <PlanBadge requiredPlan="family_office" currentPlan={userPlan} />
+                </h3>
+              </div>
               <HealthIndicator
                 income={aggregates.income}
                 expense={aggregates.expense}
@@ -2108,8 +2163,9 @@ export default function Dashboard({ user }) {
 
             {/* Resumo */}
             <div className="mt-2">
-              <h3 className="text-xs font-black text-nubank-light flex items-center gap-2 mb-4 uppercase tracking-[0.2em]">
+              <h3 className="text-xs font-black flex items-center gap-2 mb-4 uppercase tracking-[0.2em]" style={{ color: PLAN_THEMES.family_office.color }}>
                 <Sparkles size={14} /> Resumo
+                <PlanBadge requiredPlan="family_office" currentPlan={userPlan} />
               </h3>
               <div className="space-y-3">
                 {(() => {

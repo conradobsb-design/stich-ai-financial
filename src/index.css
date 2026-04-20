@@ -1,3 +1,51 @@
+/* ── Plan-based color tokens ───────────────────────────── */
+:root {
+  --color-primary:           #0ea5e9;
+  --color-primary-light:     #38bdf8;
+  --color-primary-container: rgba(14,165,233,0.15);
+  --plan-glow:               rgba(14,165,233,0.45);
+  --plan-mesh-1:             rgba(14,165,233,0.10);
+  --plan-mesh-2:             rgba(130,10,209,0.08);
+  --plan-hover-border:       rgba(130,10,209,0.20);
+  --plan-hover-glow:         rgba(130,10,209,0.08);
+}
+
+/* Essencial — sky/cyan */
+html[data-plan="essencial"] {
+  --color-primary:           #0ea5e9;
+  --color-primary-light:     #38bdf8;
+  --color-primary-container: rgba(14,165,233,0.15);
+  --plan-glow:               rgba(14,165,233,0.50);
+  --plan-mesh-1:             rgba(14,165,233,0.10);
+  --plan-mesh-2:             rgba(6,182,212,0.08);
+  --plan-hover-border:       rgba(14,165,233,0.25);
+  --plan-hover-glow:         rgba(14,165,233,0.08);
+}
+
+/* Private — Nubank purple */
+html[data-plan="private"] {
+  --color-primary:           #820AD1;
+  --color-primary-light:     #a855f7;
+  --color-primary-container: rgba(130,10,209,0.15);
+  --plan-glow:               rgba(130,10,209,0.55);
+  --plan-mesh-1:             rgba(130,10,209,0.10);
+  --plan-mesh-2:             rgba(168,85,247,0.08);
+  --plan-hover-border:       rgba(130,10,209,0.25);
+  --plan-hover-glow:         rgba(130,10,209,0.10);
+}
+
+/* Family Office — warm: ocre/marrom/areia */
+html[data-plan="family_office"] {
+  --color-primary:           #e8a020;
+  --color-primary-light:     #f0c040;
+  --color-primary-container: rgba(232,160,32,0.15);
+  --plan-glow:               rgba(232,160,32,0.55);
+  --plan-mesh-1:             rgba(184,115,10,0.12);
+  --plan-mesh-2:             rgba(124,74,45,0.10);
+  --plan-hover-border:       rgba(232,160,32,0.30);
+  --plan-hover-glow:         rgba(184,115,10,0.12);
+}
+
 /* Premium Dark Navy Styles — Nubank-inspired */
 body {
   margin: 0;
@@ -23,22 +71,22 @@ body {
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 .glass-card:hover {
-  border-color: rgba(130, 10, 209, 0.2); /* Nubank purple subtle hover */
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px -8px rgba(130, 10, 209, 0.08);
+  border-color: var(--plan-hover-border, rgba(130,10,209,0.2));
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 30px -8px var(--plan-hover-glow, rgba(130,10,209,0.08));
 }
 
-/* Animated Mesh Gradient — with Nubank purple tint */
+/* Animated Mesh Gradient — plan-aware */
 .mesh-bg {
   background-color: #020617;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.1) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(130, 10, 209, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.08) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(130, 10, 209, 0.06) 0px, transparent 50%);
+  background-image:
+    radial-gradient(at 0% 0%,   var(--plan-mesh-1, rgba(14,165,233,0.10)) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, var(--plan-mesh-2, rgba(130,10,209,0.08)) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, var(--plan-mesh-1, rgba(14,165,233,0.08)) 0px, transparent 50%),
+    radial-gradient(at 0% 100%,   var(--plan-mesh-2, rgba(130,10,209,0.06)) 0px, transparent 50%);
 }
 
 .text-glow {
-  text-shadow: 0 0 20px rgba(14, 165, 233, 0.5);
+  text-shadow: 0 0 24px var(--plan-glow, rgba(14,165,233,0.45));
 }
 
 /* Purple glow for special elements */
