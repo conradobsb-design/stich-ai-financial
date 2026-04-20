@@ -1000,6 +1000,17 @@ export default function Dashboard({ user }) {
   // Streak (hook — deve ficar no corpo do componente)
   const { streak, isNew: streakIsNew } = useStreak();
 
+  // Streak tooltip — dados calculados no nível do componente para o portal fixed
+  const streakTooltipData = useMemo(() => {
+    const nextM = STREAK_MILESTONES.find(m => m.days > streak) || STREAK_MILESTONES[STREAK_MILESTONES.length - 1];
+    const prevM = [...STREAK_MILESTONES].reverse().find(m => m.days <= streak);
+    const base   = prevM ? prevM.days : 0;
+    const segLen = nextM.days - base;
+    const segPct = Math.min(100, Math.round(((streak - base) / segLen) * 100));
+    const daysLeft = nextM.days - streak;
+    return { nextM, segPct, daysLeft };
+  }, [streak]);
+
   // Apply plan-based palette to CSS custom properties
   useEffect(() => {
     if (userPlan) document.documentElement.dataset.plan = userPlan;
@@ -1043,7 +1054,8 @@ export default function Dashboard({ user }) {
   const [editModal, setEditModal] = useState(null); // transaction item being edited
   const [showGoalModal, setShowGoalModal] = useState(false);
   const { goals, addGoal, updateGoalProgress } = useGoals(effectiveUserId);
-  const [showStreakTooltip, setShowStreakTooltip] = useState(false);
+  const [streakTooltipRect, setStreakTooltipRect] = useState(null);
+  const streakRef = useRef(null);
 
   const isOwner = effectiveUserId === user?.id;
 
@@ -2100,18 +2112,18 @@ export default function Dashboard({ user }) {
 
               {/* Streak — Hook Model widget */}
               {(() => {
-                const nextM = STREAK_MILESTONES.find(m => m.days > streak) || STREAK_MILESTONES[STREAK_MILESTONES.length - 1];
-                const prevM = [...STREAK_MILESTONES].reverse().find(m => m.days <= streak);
-                const base  = prevM ? prevM.days : 0;
-                const segLen = nextM.days - base;
-                const segPct = Math.min(100, Math.round(((streak - base) / segLen) * 100));
-                const daysLeft = nextM.days - streak;
-
                 return (
-                  <div className="relative shrink-0"
-                    onMouseEnter={() => setShowStreakTooltip(true)}
-                    onMouseLeave={() => setShowStreakTooltip(false)}
-                    onClick={() => setShowStreakTooltip(v => !v)}
+                  <div className="relative shrink-0" ref={streakRef}
+                    onMouseEnter={() => {
+                      const r = streakRef.current?.getBoundingClientRect();
+                      if (r) setStreakTooltipRect(r);
+                    }}
+                    onMouseLeave={() => setStreakTooltipRect(null)}
+                    onClick={() => {
+                      if (streakTooltipRect) { setStreakTooltipRect(null); return; }
+                      const r = streakRef.current?.getBoundingClientRect();
+                      if (r) setStreakTooltipRect(r);
+                    }}
                   >
                     {/* Badge principal */}
                     <motion.div
@@ -2132,86 +2144,7 @@ export default function Dashboard({ user }) {
                       </span>
                     </motion.div>
 
-                    {/* Tooltip — Trigger → Reward → Investment */}
-                    <AnimatePresence>
-                      {showStreakTooltip && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.9, y: 8 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.9, y: 8 }}
-                          transition={{ duration: 0.18, ease: 'easeOut' }}
-                          className="absolute right-0 bottom-full mb-3 z-50 w-64 rounded-2xl p-4 flex flex-col gap-3 shadow-2xl"
-                          style={{
-                            background: 'rgba(15,23,42,0.97)',
-                            border: `1px solid ${strokeColor}35`,
-                            backdropFilter: 'blur(20px)',
-                          }}
-                          onClick={e => e.stopPropagation()}
-                        >
-                          {/* Título */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-xl">🔥</span>
-                            <div>
-                              <p className="text-xs font-black text-white leading-tight">
-                                {streak} {streak === 1 ? 'dia' : 'dias'} seguidos!
-                              </p>
-                              <p className="text-[10px] text-white/40 leading-tight">
-                                {streak === 1 ? 'Você começou hoje. Continue amanhã!' : `Incrível consistência. Não quebre agora.`}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Próxima recompensa */}
-                          <div className="rounded-xl p-3 flex flex-col gap-2"
-                            style={{ background: `${strokeColor}10`, border: `1px solid ${strokeColor}20` }}>
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Próxima recompensa</span>
-                              <span className="text-[10px] font-black" style={{ color: strokeColor }}>
-                                {daysLeft === 0 ? 'Hoje!' : `${daysLeft} ${daysLeft === 1 ? 'dia' : 'dias'}`}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl">{nextM.icon}</span>
-                              <div className="min-w-0">
-                                <p className="text-xs font-black text-white leading-tight">{nextM.reward}</p>
-                                <p className="text-[10px] text-white/40 leading-snug">{nextM.desc}</p>
-                              </div>
-                            </div>
-                            {/* Barra de progresso até o milestone */}
-                            <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-                              <motion.div
-                                className="h-full rounded-full"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${segPct}%` }}
-                                transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
-                                style={{ background: strokeColor }}
-                              />
-                            </div>
-                            <p className="text-[9px] text-white/30 text-right">
-                              {streak}/{nextM.days} dias — {segPct}%
-                            </p>
-                          </div>
-
-                          {/* CTA — Investment */}
-                          <div className="flex items-center gap-2 rounded-xl p-2.5"
-                            style={{ background: 'rgba(255,255,255,0.04)' }}>
-                            <span className="text-base">📅</span>
-                            <p className="text-[10px] text-white/60 leading-snug">
-                              <span className="font-bold text-white/80">Volte amanhã</span> para manter sua série e desbloquear{' '}
-                              <span style={{ color: strokeColor }} className="font-bold">{nextM.reward}</span>.
-                            </p>
-                          </div>
-
-                          {/* Seta */}
-                          <div className="absolute right-5 top-full w-0 h-0"
-                            style={{
-                              borderLeft: '6px solid transparent',
-                              borderRight: '6px solid transparent',
-                              borderTop: `6px solid rgba(15,23,42,0.97)`,
-                            }} />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    {/* tooltip rendered via portal at root — see below */}
                   </div>
                 );
               })()}
@@ -3641,6 +3574,105 @@ export default function Dashboard({ user }) {
             userPlan={userPlan}
           />
         )}
+      </AnimatePresence>
+
+      {/* ── Streak Tooltip Portal — fixed, nunca clipado ── */}
+      <AnimatePresence>
+        {streakTooltipRect && (() => {
+          const { nextM, segPct, daysLeft } = streakTooltipData;
+          // cor do stroke reutilizando a lógica do ScoreBanner
+          const sColor = isWarm
+            ? '#e8a020'
+            : '#10b981';
+          // posiciona abaixo do badge, alinhado à direita dele
+          const top  = streakTooltipRect.bottom + 10;
+          const right = window.innerWidth - streakTooltipRect.right;
+          return (
+            <motion.div
+              key="streak-tooltip"
+              initial={{ opacity: 0, scale: 0.92, y: -6 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: -6 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="w-64 rounded-2xl p-4 flex flex-col gap-3 shadow-2xl"
+              style={{
+                position: 'fixed',
+                top,
+                right,
+                zIndex: 9999,
+                background: 'rgba(10,14,26,0.97)',
+                border: `1px solid ${sColor}40`,
+                backdropFilter: 'blur(24px)',
+              }}
+              onMouseEnter={() => {
+                const r = streakRef.current?.getBoundingClientRect();
+                if (r) setStreakTooltipRect(r);
+              }}
+              onMouseLeave={() => setStreakTooltipRect(null)}
+            >
+              {/* Seta para cima */}
+              <div className="absolute right-5 -top-[6px] w-0 h-0"
+                style={{
+                  borderLeft: '6px solid transparent',
+                  borderRight: '6px solid transparent',
+                  borderBottom: `6px solid ${sColor}40`,
+                }} />
+
+              {/* Título */}
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🔥</span>
+                <div>
+                  <p className="text-xs font-black text-white leading-tight">
+                    {streak} {streak === 1 ? 'dia' : 'dias'} seguidos!
+                  </p>
+                  <p className="text-[10px] text-white/40 leading-tight">
+                    {streak === 1 ? 'Você começou hoje. Continue amanhã!' : 'Incrível consistência. Não quebre agora.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Próxima recompensa */}
+              <div className="rounded-xl p-3 flex flex-col gap-2"
+                style={{ background: `${sColor}12`, border: `1px solid ${sColor}25` }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Próxima recompensa</span>
+                  <span className="text-[10px] font-black" style={{ color: sColor }}>
+                    {daysLeft === 0 ? 'Hoje!' : `${daysLeft} ${daysLeft === 1 ? 'dia' : 'dias'}`}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">{nextM.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-white leading-tight">{nextM.reward}</p>
+                    <p className="text-[10px] text-white/40 leading-snug">{nextM.desc}</p>
+                  </div>
+                </div>
+                <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                  <motion.div
+                    className="h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${segPct}%` }}
+                    transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
+                    style={{ background: sColor }}
+                  />
+                </div>
+                <p className="text-[9px] text-white/30 text-right">
+                  {streak}/{nextM.days} dias — {segPct}%
+                </p>
+              </div>
+
+              {/* CTA — Investment */}
+              <div className="flex items-center gap-2 rounded-xl p-2.5"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span className="text-base">📅</span>
+                <p className="text-[10px] text-white/60 leading-snug">
+                  <span className="font-bold text-white/80">Volte amanhã</span> para manter sua série e desbloquear{' '}
+                  <span style={{ color: sColor }} className="font-bold">{nextM.reward}</span>.
+                </p>
+              </div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
     </div>
