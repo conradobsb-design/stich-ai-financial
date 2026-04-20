@@ -156,10 +156,10 @@ html.light body {
 html.light .mesh-bg {
   background-color: #f1f5f9 !important;
   background-image:
-    radial-gradient(at 0% 0%,   rgba(14, 165, 233, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.05) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(99, 102, 241, 0.04) 0px, transparent 50%) !important;
+    radial-gradient(at 0% 0%,   var(--plan-mesh-1, rgba(14,165,233,0.08)) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, var(--plan-mesh-2, rgba(99,102,241,0.05)) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, var(--plan-mesh-1, rgba(14,165,233,0.05)) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, var(--plan-mesh-2, rgba(99,102,241,0.04)) 0px, transparent 50%) !important;
 }
 
 html.light .bg-background {  background-color: #f1f5f9 !important; }
@@ -177,11 +177,15 @@ html.light .glass-card:hover {
 }
 
 html.light .glass {
-  background: rgba(255,255,255,0.85) !important;
+  background: rgba(255,255,255,0.92) !important;
   backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(0,0,0,0.07) !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+  border: 1px solid rgba(0,0,0,0.10) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
 }
+
+/* Bottom nav and header text legibility in light mode */
+html.light .text-white\/40 { color: rgba(15,23,42,0.45) !important; }
+html.light .text-white\/50 { color: rgba(15,23,42,0.55) !important; }
 
 /* Surface containers */
 html.light .bg-surface-container-low { background-color: #e2e8f0 !important; }
@@ -242,6 +246,8 @@ html.light .hover\:bg-white\/\[0\.10\]:hover { background-color: rgba(0,0,0,0.07
 /* ── white/opacity text ── */
 html.light .text-white\/90  { color: rgba(15,23,42,0.90) !important; }
 html.light .text-white\/70  { color: rgba(15,23,42,0.70) !important; }
+html.light .text-white\/35  { color: rgba(15,23,42,0.45) !important; }
+html.light .hover\:text-white\/60:hover { color: rgba(15,23,42,0.70) !important; }
 
 /* ── slate text colors ── */
 html.light .text-slate-200  { color: #1e293b !important; }
