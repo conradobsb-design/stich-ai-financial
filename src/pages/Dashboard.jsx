@@ -1383,6 +1383,13 @@ export default function Dashboard({ user }) {
     return new Date(y, mm - 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase();
   };
 
+  const formatMonthShort = (m) => {
+    if (!m) return '';
+    const [y, mm] = m.split('-');
+    const abbr = new Date(y, mm - 1).toLocaleString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase();
+    return `${abbr} ${y.slice(2)}`;
+  };
+
   const comparativeData = useMemo(() => {
     if (!selectedMonth || data.length === 0) return null;
     const [year, month] = selectedMonth.split('-').map(Number);
@@ -1708,15 +1715,16 @@ export default function Dashboard({ user }) {
         <div className="flex items-center gap-1 sm:gap-2">
           {/* Month picker — only on Início, Extrato, Análise */}
           {activeTab !== 'perfil' && (
-            <div className="glass p-1 rounded-xl flex items-center border border-outline-variant">
-              <Calendar className="text-primary ml-2 mr-1.5" size={14} />
+            <div className="glass px-2 py-1 rounded-xl flex items-center border border-outline-variant gap-1">
+              <Calendar className="text-primary shrink-0" size={13} />
               <select
-                className="bg-transparent border-none text-white font-bold text-xs focus:ring-0 cursor-pointer pr-6 appearance-none"
+                className="bg-transparent border-none text-white font-black text-[11px] focus:ring-0 cursor-pointer appearance-none min-w-0 w-[5.5rem]"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
               >
-                {availableMonths.map(m => <option key={m} value={m} className="bg-surface">{formatMonth(m)}</option>)}
+                {availableMonths.map(m => <option key={m} value={m} className="bg-surface">{formatMonthShort(m)}</option>)}
               </select>
+              <ChevronDown size={11} className="text-white/40 shrink-0 -ml-1" />
             </div>
           )}
 
@@ -1843,9 +1851,6 @@ export default function Dashboard({ user }) {
                       ⚠ Erosão de patrimônio
                     </span>
                   )}
-                  <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
-                    {selectedMonth ? new Date(selectedMonth + '-02').toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '—'}
-                  </span>
                 </div>
               </div>
 
@@ -1920,31 +1925,32 @@ export default function Dashboard({ user }) {
                     setCategoryFilter([]);
                     setTimeout(() => transactionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
                   }}
-                  className="group/card text-left glass p-4 rounded-2xl border border-transparent hover:border-cyan-400/40 hover:bg-cyan-400/5 active:scale-95 transition-all cursor-pointer"
+                  className="group/card text-left glass p-3 rounded-2xl border border-transparent hover:border-cyan-400/40 hover:bg-cyan-400/5 active:scale-95 transition-all cursor-pointer flex flex-col gap-2"
                 >
-                  <div className="flex items-center gap-1.5 font-bold text-[9px] uppercase tracking-widest mb-2" style={{ color: '#00d2ff' }}>
+                  <div className="flex items-center gap-1.5 font-bold text-[9px] uppercase tracking-widest" style={{ color: '#00d2ff' }}>
                     <PiggyBank size={11} /> Cofrinho
                   </div>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[8px] font-bold" style={{ color: '#f8717180' }}>Resgates</span>
-                    <span className="text-xs font-black text-white">{maskBRL(aggregates.savingsIn, hideValues)}</span>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold" style={{ color: '#f8717199' }}>Resgates</span>
+                      <span className="text-[11px] font-black text-white">{maskBRL(aggregates.savingsIn, hideValues)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold" style={{ color: '#4ade8099' }}>Aplicações</span>
+                      <span className="text-[11px] font-black text-white">{maskBRL(aggregates.savingsOut, hideValues)}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[8px] font-bold" style={{ color: '#4ade8080' }}>Aplicações</span>
-                    <span className="text-xs font-black text-white">{maskBRL(aggregates.savingsOut, hideValues)}</span>
-                  </div>
+
                   <div className="border-t border-white/10 pt-1.5 flex items-center justify-between">
-                    <span className="text-[8px] font-bold" style={{ color: '#00d2ff80' }}>Saldo</span>
-                    <span className="text-sm font-black" style={{
+                    <span className="text-[9px] font-bold" style={{ color: '#00d2ff99' }}>Saldo líquido</span>
+                    <span className="text-sm font-black flex items-center gap-0.5" style={{
                       color: aggregates.savingsNet <= 0 ? '#4ade80' : '#f87171'
                     }}>
+                      {aggregates.savingsNet <= 0 ? '▲' : '▼'}
                       {maskBRL(Math.abs(aggregates.savingsNet), hideValues)}
-                      <span className="text-[8px] ml-0.5">{aggregates.savingsNet <= 0 ? '▲' : '▼'}</span>
                     </span>
                   </div>
-                  {aggregates.patrimonioErosion && (
-                    <p className="text-[7px] text-error/60 font-bold mt-1 leading-tight">Resgate cobriu déficit</p>
-                  )}
                 </button>
 
               </div>
