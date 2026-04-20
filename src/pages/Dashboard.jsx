@@ -555,11 +555,16 @@ const useGoals = (userId) => {
   React.useEffect(() => { fetchGoals(); }, [fetchGoals]);
 
   const addGoal = async (goal) => {
-    if (!userId) return;
+    if (!userId) return { success: false, error: 'Usuário não autenticado' };
     const { data, error } = await supabase.schema('stich_ai').from('goals')
       .insert({ ...goal, user_id: userId, status: 'active' })
       .select().single();
-    if (!error && data) setGoals(prev => [...prev, data]);
+    if (error) {
+      console.error('addGoal error:', error);
+      return { success: false, error: error.message };
+    }
+    if (data) setGoals(prev => [...prev, data]);
+    return { success: true };
   };
 
   const updateGoalProgress = async (id, current_amount, status) => {
@@ -574,25 +579,65 @@ const useGoals = (userId) => {
 
 // ── Modal para criar/editar metas ──
 const GoalAddModal = ({ onClose, onSave, userPlan = 'free' }) => {
-  const isWarm = userPlan === 'family_office';
-  const accentColor = isWarm ? '#e8a020' : '#0ea5e9';
+  const { theme } = useApp();
+  const isLight = theme === 'light';
+  const isWarm  = userPlan === 'family_office';
+  const accent  = isWarm ? '#e8a020' : '#0ea5e9';
+
+  // Cores adaptadas ao tema
+  const bg       = isLight ? (isWarm ? '#faf5ec' : '#ffffff')         : 'rgba(15,23,42,0.98)';
+  const textMain = isLight ? (isWarm ? '#3d2008' : '#0f172a')         : '#ffffff';
+  const textSub  = isLight ? (isWarm ? '#7c4a2d' : '#475569')         : 'rgba(255,255,255,0.65)';
+  const inputBg  = isLight ? (isWarm ? 'rgba(232,160,32,0.06)' : 'rgba(14,165,233,0.05)') : 'rgba(255,255,255,0.06)';
+  const inputBdr = isLight ? (isWarm ? 'rgba(124,74,45,0.25)' : 'rgba(14,165,233,0.2)') : 'rgba(255,255,255,0.12)';
+
+  // Emoji → sugestão de título + tipo
+  const EMOJI_PRESETS = {
+    '🎯': { title: 'Meta personalizada',        type: 'custom'          },
+    '💰': { title: 'Guardar dinheiro',           type: 'save_amount'     },
+    '✂️': { title: 'Reduzir gastos',             type: 'reduce_category' },
+    '💳': { title: 'Quitar dívida',              type: 'pay_debt'        },
+    '🏦': { title: 'Construir reserva',          type: 'build_reserve'   },
+    '🏡': { title: 'Comprar imóvel',             type: 'save_amount'     },
+    '✈️': { title: 'Viagem dos sonhos',          type: 'save_amount'     },
+    '📚': { title: 'Investir em educação',       type: 'save_amount'     },
+    '💪': { title: 'Academia e saúde',           type: 'reduce_category' },
+    '🌟': { title: 'Objetivo especial',          type: 'custom'          },
+  };
+
   const GOAL_TYPES = [
-    { value: 'save_amount',       label: '💰 Guardar valor',       placeholder: 'Ex: Reserva de emergência' },
-    { value: 'reduce_category',   label: '✂️ Reduzir categoria',    placeholder: 'Ex: Gastar menos com alimentação' },
-    { value: 'pay_debt',          label: '💳 Quitar dívida',        placeholder: 'Ex: Pagar cartão de crédito' },
-    { value: 'build_reserve',     label: '🏦 Construir reserva',    placeholder: 'Ex: 6 meses de salário' },
-    { value: 'custom',            label: '🎯 Meta personalizada',   placeholder: 'Descreva sua meta' },
+    { value: 'save_amount',     label: '💰 Guardar valor'      },
+    { value: 'reduce_category', label: '✂️ Reduzir categoria'  },
+    { value: 'pay_debt',        label: '💳 Quitar dívida'      },
+    { value: 'build_reserve',   label: '🏦 Construir reserva'  },
+    { value: 'custom',          label: '🎯 Meta personalizada' },
   ];
+
   const [form, setForm] = React.useState({
-    emoji: '🎯', title: '', type: 'save_amount', target_amount: '', category: '', deadline: ''
+    emoji: '🎯', title: 'Meta personalizada', type: 'custom', target_amount: '', category: '', deadline: ''
   });
+  const [saving, setSaving]   = React.useState(false);
+  const [errMsg, setErrMsg]   = React.useState('');
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const selectedType = GOAL_TYPES.find(t => t.value === form.type);
+  const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const handleSave = () => {
-    if (!form.title.trim() || !form.target_amount) return;
-    onSave({
+  const pickEmoji = (e) => {
+    const preset = EMOJI_PRESETS[e] || {};
+    setForm(f => ({
+      ...f,
+      emoji: e,
+      title: preset.title || f.title,
+      type:  preset.type  || f.type,
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { setErrMsg('Dê um nome para a meta.'); return; }
+    if (!form.target_amount || isNaN(parseFloat(form.target_amount))) { setErrMsg('Informe o valor alvo.'); return; }
+    if (form.type === 'reduce_category' && !form.category) { setErrMsg('Selecione a categoria a reduzir.'); return; }
+    setErrMsg('');
+    setSaving(true);
+    const result = await onSave({
       emoji: form.emoji,
       title: form.title.trim(),
       type: form.type,
@@ -601,71 +646,95 @@ const GoalAddModal = ({ onClose, onSave, userPlan = 'free' }) => {
       category: form.type === 'reduce_category' ? form.category : null,
       deadline: form.deadline || null,
     });
-    onClose();
+    setSaving(false);
+    if (result?.success === false) {
+      setErrMsg(`Erro ao salvar: ${result.error}`);
+    } else {
+      onClose();
+    }
   };
 
-  const inputCls = "w-full bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-primary/60";
+  const inputStyle = {
+    width: '100%',
+    background: inputBg,
+    border: `1px solid ${inputBdr}`,
+    borderRadius: '0.75rem',
+    padding: '0.5rem 0.75rem',
+    fontSize: '0.875rem',
+    color: textMain,
+    WebkitTextFillColor: textMain,
+    caretColor: textMain,
+    outline: 'none',
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)' }}>
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 40 }}
-        className="w-full max-w-md glass-card rounded-[1.75rem] p-6 flex flex-col gap-4"
+        className="w-full max-w-md rounded-[1.75rem] p-6 flex flex-col gap-4 shadow-2xl"
+        style={{ background: bg, border: `1px solid ${accent}30` }}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-black text-lg text-white">Nova Meta</h3>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors"><X size={20} /></button>
+          <h3 className="font-black text-lg" style={{ color: textMain }}>Nova Meta</h3>
+          <button onClick={onClose} style={{ color: textSub }}><X size={20} /></button>
         </div>
 
-        {/* Emoji picker rápido */}
+        {/* Emoji picker — cada um preenche título + tipo */}
         <div className="flex gap-2 flex-wrap">
-          {['🎯','💰','✂️','💳','🏦','🏡','✈️','📚','💪','🌟'].map(e => (
-            <button key={e} onClick={() => set('emoji', e)}
-              className="text-xl p-1.5 rounded-xl transition-all"
-              style={{ background: form.emoji === e ? `${accentColor}25` : 'transparent', border: `1px solid ${form.emoji === e ? accentColor : 'transparent'}` }}>
+          {Object.keys(EMOJI_PRESETS).map(e => (
+            <button key={e} onClick={() => pickEmoji(e)}
+              className="text-xl p-1.5 rounded-xl transition-all active:scale-90"
+              style={{
+                background: form.emoji === e ? `${accent}22` : 'transparent',
+                border: `1.5px solid ${form.emoji === e ? accent : 'transparent'}`,
+              }}>
               {e}
             </button>
           ))}
         </div>
 
         {/* Tipo */}
-        <select value={form.type} onChange={e => set('type', e.target.value)}
-          className={inputCls} style={{ WebkitTextFillColor: '#ffffff' }}>
+        <select value={form.type} onChange={e => setF('type', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
           {GOAL_TYPES.map(t => <option key={t.value} value={t.value} className="bg-surface">{t.label}</option>)}
         </select>
 
         {/* Título */}
-        <input value={form.title} onChange={e => set('title', e.target.value)}
-          placeholder={selectedType?.placeholder || 'Nome da meta'}
-          className={inputCls} style={{ WebkitTextFillColor: '#ffffff', caretColor: '#ffffff' }} />
+        <input value={form.title} onChange={e => setF('title', e.target.value)}
+          placeholder="Nome da meta" style={inputStyle} />
 
         {/* Valor alvo */}
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/40">R$</span>
-          <input type="number" value={form.target_amount} onChange={e => set('target_amount', e.target.value)}
-            placeholder="0,00" className={inputCls + ' pl-8'}
-            style={{ WebkitTextFillColor: '#ffffff', caretColor: '#ffffff' }} />
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold" style={{ color: textSub }}>R$</span>
+          <input type="number" value={form.target_amount} onChange={e => setF('target_amount', e.target.value)}
+            placeholder="0,00" style={{ ...inputStyle, paddingLeft: '2rem' }} />
         </div>
 
         {/* Categoria (só se reduce_category) */}
         {form.type === 'reduce_category' && (
-          <select value={form.category} onChange={e => set('category', e.target.value)}
-            className={inputCls} style={{ WebkitTextFillColor: '#ffffff' }}>
-            <option value="" className="bg-surface">Selecione a categoria</option>
-            {ALL_CATEGORIES.map(c => <option key={c} value={c} className="bg-surface">{c}</option>)}
+          <select value={form.category} onChange={e => setF('category', e.target.value)}
+            style={{ ...inputStyle, cursor: 'pointer' }}>
+            <option value="">Selecione a categoria</option>
+            {ALL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         )}
 
         {/* Prazo */}
-        <input type="date" value={form.deadline} onChange={e => set('deadline', e.target.value)}
-          className={inputCls} style={{ WebkitTextFillColor: '#ffffff', caretColor: '#ffffff', colorScheme: 'dark' }} />
+        <input type="date" value={form.deadline} onChange={e => setF('deadline', e.target.value)}
+          style={{ ...inputStyle, colorScheme: isLight ? 'light' : 'dark' }} />
 
-        <button onClick={handleSave}
-          className="w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95"
-          style={{ background: accentColor, color: isWarm ? '#120e0a' : '#fff' }}>
-          Criar Meta
+        {errMsg && (
+          <p className="text-xs font-bold text-center rounded-xl px-3 py-2"
+            style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>
+            {errMsg}
+          </p>
+        )}
+
+        <button onClick={handleSave} disabled={saving}
+          className="w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95 disabled:opacity-60"
+          style={{ background: accent, color: '#ffffff' }}>
+          {saving ? 'Salvando…' : 'Criar Meta'}
         </button>
       </motion.div>
     </div>
