@@ -456,26 +456,21 @@ const CategoryChart = ({ chartData, onCategoryClick, selectedCategories, colorMa
   );
 };
 
-// Sub-component: Health Gauge — 7 dimensões ponderadas
-const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories, comparativeData, userPlan = 'free' }) => {
-  const isWarmHealth = userPlan === 'family_office';
-  // D1: Taxa de Gastos (25%)
-  const expRatio = income > 0 ? expense / income : (expense > 0 ? 1 : 0);
+// ── Cálculo do score extraído — usado pelo HealthIndicator e pelo ScoreBanner ──
+const calcHealthScore = ({ income, expense, savingsIn, savingsOut, topCategories, comparativeData }) => {
+  const expRatio  = income > 0 ? expense / income : (expense > 0 ? 1 : 0);
   const d1 = expRatio <= 0.50 ? 100 : expRatio <= 0.70 ? 80 : expRatio <= 0.85 ? 55 : expRatio <= 1.00 ? 25 : 0;
 
-  // D2: Taxa de Poupança líquida (20%)
-  const netApplied = (savingsOut || 0) - (savingsIn || 0);
+  const netApplied  = (savingsOut || 0) - (savingsIn || 0);
   const savingsRate = income > 0 ? netApplied / income : 0;
   const d2 = netApplied < 0 ? 10
            : savingsRate >= 0.20 ? 100 : savingsRate >= 0.10 ? 75
            : savingsRate >= 0.05 ? 50  : savingsRate >= 0.01 ? 25 : 0;
 
-  // D3: Saldo do Mês (15%)
-  const balance = income - expense;
+  const balance  = income - expense;
   const balRatio = income > 0 ? balance / income : (balance > 0 ? 1 : 0);
   const d3 = balRatio > 0.30 ? 100 : balRatio > 0.15 ? 75 : balRatio > 0.05 ? 50 : balRatio >= 0 ? 25 : 0;
 
-  // D4: Tendência mês vs anterior (10%)
   const mChg = comparativeData?.month?.changes;
   const d4 = !mChg ? 50
            : (mChg.expense < 0 && mChg.income > 0) ? 100
@@ -483,7 +478,6 @@ const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories
            : Math.abs(mChg.expense) <= 5 ? 50
            : mChg.expense <= 10 ? 25 : 0;
 
-  // D5: Tendência trimestre vs anterior (15%)
   const qChg = comparativeData?.quarter?.changes;
   const d5 = !qChg ? 50
            : (qChg.expense < 0 && qChg.income > 0) ? 100
@@ -491,18 +485,188 @@ const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories
            : Math.abs(qChg.expense) <= 5 ? 50
            : qChg.expense <= 15 ? 25 : 0;
 
-  // D6: Tendência ano vs ano (10%)
   const yChg = comparativeData?.year?.changes;
   const d6 = !yChg ? 50
            : yChg.balance > 20 ? 100 : yChg.balance > 5 ? 75
            : yChg.balance >= -5 ? 50 : yChg.balance >= -20 ? 25 : 0;
 
-  // D7: Concentração de gastos (5%)
   const topRatio = (topCategories?.[0] && expense > 0) ? topCategories[0][1] / expense : 0;
   const d7 = expense === 0 ? 100
            : topRatio < 0.20 ? 100 : topRatio < 0.35 ? 65 : topRatio < 0.50 ? 35 : 10;
 
   const score = Math.round(d1*0.25 + d2*0.20 + d3*0.15 + d4*0.10 + d5*0.15 + d6*0.10 + d7*0.05);
+  return { score, d1, d2, d3, d4, d5, d6, d7, expRatio, savingsRate, balRatio, topRatio };
+};
+
+// ── Hook de Streak — localStorage MVP ──
+const useStreak = () => {
+  const [streak, setStreak] = React.useState(0);
+  const [isNew, setIsNew]   = React.useState(false);
+
+  React.useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const yday = yesterday.toISOString().split('T')[0];
+    const raw  = localStorage.getItem('co_streak');
+    const saved = raw ? JSON.parse(raw) : { streak: 0, lastDate: '' };
+
+    let next = saved.streak;
+    if (saved.lastDate === today) {
+      // já contou hoje — só exibe
+    } else if (saved.lastDate === yday) {
+      next = saved.streak + 1;
+      setIsNew(true);
+      localStorage.setItem('co_streak', JSON.stringify({ streak: next, lastDate: today }));
+    } else {
+      next = 1;
+      setIsNew(saved.lastDate !== '');
+      localStorage.setItem('co_streak', JSON.stringify({ streak: 1, lastDate: today }));
+    }
+    setStreak(next);
+  }, []);
+
+  return { streak, isNew };
+};
+
+// ── Hook de Metas — Supabase ──
+const useGoals = (userId) => {
+  const [goals, setGoals] = React.useState([]);
+
+  const fetchGoals = React.useCallback(async () => {
+    if (!userId) return;
+    const { data } = await supabase.schema('stich_ai').from('goals')
+      .select('*')
+      .eq('user_id', userId)
+      .in('status', ['active', 'done'])
+      .order('created_at', { ascending: true });
+    if (data) setGoals(data);
+  }, [userId]);
+
+  React.useEffect(() => { fetchGoals(); }, [fetchGoals]);
+
+  const addGoal = async (goal) => {
+    if (!userId) return;
+    const { data, error } = await supabase.schema('stich_ai').from('goals')
+      .insert({ ...goal, user_id: userId, status: 'active' })
+      .select().single();
+    if (!error && data) setGoals(prev => [...prev, data]);
+  };
+
+  const updateGoalProgress = async (id, current_amount, status) => {
+    const updates = { current_amount };
+    if (status) updates.status = status;
+    await supabase.schema('stich_ai').from('goals').update(updates).eq('id', id);
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g));
+  };
+
+  return { goals, addGoal, updateGoalProgress, refetch: fetchGoals };
+};
+
+// ── Modal para criar/editar metas ──
+const GoalAddModal = ({ onClose, onSave, userPlan = 'free' }) => {
+  const isWarm = userPlan === 'family_office';
+  const accentColor = isWarm ? '#e8a020' : '#0ea5e9';
+  const GOAL_TYPES = [
+    { value: 'save_amount',       label: '💰 Guardar valor',       placeholder: 'Ex: Reserva de emergência' },
+    { value: 'reduce_category',   label: '✂️ Reduzir categoria',    placeholder: 'Ex: Gastar menos com alimentação' },
+    { value: 'pay_debt',          label: '💳 Quitar dívida',        placeholder: 'Ex: Pagar cartão de crédito' },
+    { value: 'build_reserve',     label: '🏦 Construir reserva',    placeholder: 'Ex: 6 meses de salário' },
+    { value: 'custom',            label: '🎯 Meta personalizada',   placeholder: 'Descreva sua meta' },
+  ];
+  const [form, setForm] = React.useState({
+    emoji: '🎯', title: '', type: 'save_amount', target_amount: '', category: '', deadline: ''
+  });
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const selectedType = GOAL_TYPES.find(t => t.value === form.type);
+
+  const handleSave = () => {
+    if (!form.title.trim() || !form.target_amount) return;
+    onSave({
+      emoji: form.emoji,
+      title: form.title.trim(),
+      type: form.type,
+      target_amount: parseFloat(form.target_amount),
+      current_amount: 0,
+      category: form.type === 'reduce_category' ? form.category : null,
+      deadline: form.deadline || null,
+    });
+    onClose();
+  };
+
+  const inputCls = "w-full bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-primary/60";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 40 }}
+        className="w-full max-w-md glass-card rounded-[1.75rem] p-6 flex flex-col gap-4"
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="font-black text-lg text-white">Nova Meta</h3>
+          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors"><X size={20} /></button>
+        </div>
+
+        {/* Emoji picker rápido */}
+        <div className="flex gap-2 flex-wrap">
+          {['🎯','💰','✂️','💳','🏦','🏡','✈️','📚','💪','🌟'].map(e => (
+            <button key={e} onClick={() => set('emoji', e)}
+              className="text-xl p-1.5 rounded-xl transition-all"
+              style={{ background: form.emoji === e ? `${accentColor}25` : 'transparent', border: `1px solid ${form.emoji === e ? accentColor : 'transparent'}` }}>
+              {e}
+            </button>
+          ))}
+        </div>
+
+        {/* Tipo */}
+        <select value={form.type} onChange={e => set('type', e.target.value)}
+          className={inputCls} style={{ WebkitTextFillColor: '#ffffff' }}>
+          {GOAL_TYPES.map(t => <option key={t.value} value={t.value} className="bg-surface">{t.label}</option>)}
+        </select>
+
+        {/* Título */}
+        <input value={form.title} onChange={e => set('title', e.target.value)}
+          placeholder={selectedType?.placeholder || 'Nome da meta'}
+          className={inputCls} style={{ WebkitTextFillColor: '#ffffff', caretColor: '#ffffff' }} />
+
+        {/* Valor alvo */}
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/40">R$</span>
+          <input type="number" value={form.target_amount} onChange={e => set('target_amount', e.target.value)}
+            placeholder="0,00" className={inputCls + ' pl-8'}
+            style={{ WebkitTextFillColor: '#ffffff', caretColor: '#ffffff' }} />
+        </div>
+
+        {/* Categoria (só se reduce_category) */}
+        {form.type === 'reduce_category' && (
+          <select value={form.category} onChange={e => set('category', e.target.value)}
+            className={inputCls} style={{ WebkitTextFillColor: '#ffffff' }}>
+            <option value="" className="bg-surface">Selecione a categoria</option>
+            {ALL_CATEGORIES.map(c => <option key={c} value={c} className="bg-surface">{c}</option>)}
+          </select>
+        )}
+
+        {/* Prazo */}
+        <input type="date" value={form.deadline} onChange={e => set('deadline', e.target.value)}
+          className={inputCls} style={{ WebkitTextFillColor: '#ffffff', caretColor: '#ffffff', colorScheme: 'dark' }} />
+
+        <button onClick={handleSave}
+          className="w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95"
+          style={{ background: accentColor, color: isWarm ? '#120e0a' : '#fff' }}>
+          Criar Meta
+        </button>
+      </motion.div>
+    </div>
+  );
+};
+
+// Sub-component: Health Gauge — 7 dimensões ponderadas
+const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories, comparativeData, userPlan = 'free' }) => {
+  const isWarmHealth = userPlan === 'family_office';
+  const { score, d1, d2, d3, d4, d5, d6, d7, expRatio, savingsRate, balRatio, topRatio } =
+    calcHealthScore({ income, expense, savingsIn, savingsOut, topCategories, comparativeData });
 
   const { color, stroke, msg } = isWarmHealth
     ? (score >= 80 ? { color: 'text-primary',       stroke: '#e8a020', msg: 'Excelente' } :
@@ -823,6 +987,8 @@ export default function Dashboard({ user }) {
     success:    isWarm ? '#c49a4a' : '#10b981',
     accent:     isWarm ? '#e8a020' : '#00d2ff',
   };
+  // Streak (hook — deve ficar no corpo do componente)
+  const { streak, isNew: streakIsNew } = useStreak();
 
   // Apply plan-based palette to CSS custom properties
   useEffect(() => {
@@ -865,6 +1031,8 @@ export default function Dashboard({ user }) {
   const [copied, setCopied] = useState(false);
 
   const [editModal, setEditModal] = useState(null); // transaction item being edited
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const { goals, addGoal, updateGoalProgress } = useGoals(effectiveUserId);
 
   const isOwner = effectiveUserId === user?.id;
 
@@ -1436,6 +1604,24 @@ export default function Dashboard({ user }) {
     return Object.entries(cats).sort((a,b) => b[1] - a[1]).slice(0, 3);
   }, [monthlyData]);
 
+  // Auto-sync metas com dados do mês atual
+  useEffect(() => {
+    if (!goals.length) return;
+    goals.forEach(goal => {
+      if (goal.status !== 'active') return;
+      if (goal.type === 'reduce_category' && goal.category) {
+        const spent = monthlyData
+          .filter(item => classifyTransaction(item) === 'expense' && smartCategory(item) === goal.category)
+          .reduce((s, item) => s + Math.abs(item.amount), 0);
+        updateGoalProgress(goal.id, spent, spent >= goal.target_amount ? 'done' : undefined);
+      } else if (goal.type === 'save_amount') {
+        const saved = aggregates.savingsOut - aggregates.savingsIn;
+        if (saved > 0) updateGoalProgress(goal.id, saved, saved >= goal.target_amount ? 'done' : undefined);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthlyData, aggregates]);
+
   const chartData = useMemo(() => {
     const agg = {};
     monthlyData.forEach(item => {
@@ -1852,6 +2038,136 @@ export default function Dashboard({ user }) {
               </span>
             ))}
           </div>
+        )}
+
+        {/* ── Score Banner — destaque diário ── */}
+        {comparativeData && (() => {
+          const { score } = calcHealthScore({
+            income: aggregates.income, expense: aggregates.expense,
+            savingsIn: aggregates.savingsIn, savingsOut: aggregates.savingsOut,
+            topCategories, comparativeData,
+          });
+          const strokeColor = isWarm
+            ? (score >= 80 ? '#e8a020' : score >= 60 ? '#c49a4a' : score >= 40 ? '#facc15' : score >= 20 ? '#fb923c' : '#ef4444')
+            : (score >= 80 ? '#10b981' : score >= 60 ? '#22d3ee' : score >= 40 ? '#facc15' : score >= 20 ? '#fb923c' : '#ef4444');
+          const label = score >= 80 ? 'Ótimo dia financeiro!' : score >= 60 ? 'Dia regular' : score >= 40 ? 'Atenção nas finanças' : score >= 20 ? 'Situação de risco' : 'Situação crítica';
+          const R = 28; const circ = 2 * Math.PI * R;
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="glass-card rounded-[1.75rem] p-4 flex items-center gap-4"
+            >
+              {/* Círculo animado */}
+              <div className="relative shrink-0 w-[68px] h-[68px] flex items-center justify-center">
+                <svg width="68" height="68" className="-rotate-90 absolute inset-0">
+                  <circle cx="34" cy="34" r={R} strokeWidth="5" fill="none" className="text-surface-container" stroke="currentColor" />
+                  <motion.circle
+                    cx="34" cy="34" r={R} strokeWidth="5" fill="none"
+                    stroke={strokeColor} strokeLinecap="round"
+                    strokeDasharray={circ}
+                    initial={{ strokeDashoffset: circ }}
+                    animate={{ strokeDashoffset: circ - (circ * score) / 100 }}
+                    transition={{ duration: 1.2, ease: 'easeOut', delay: 0.2 }}
+                  />
+                </svg>
+                <div className="relative flex flex-col items-center leading-none">
+                  <span className="text-xl font-black" style={{ color: strokeColor }}>{score}</span>
+                  <span className="text-[8px] font-bold text-white/40 uppercase tracking-wider">score</span>
+                </div>
+              </div>
+
+              {/* Label + descrição */}
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-sm text-white leading-tight">{label}</p>
+                <p className="text-[10px] text-white/40 mt-0.5">Saúde financeira do mês · {score}/100</p>
+                <p className="text-[10px] text-white/30 mt-1 hidden sm:block">
+                  Baseado em gastos, poupança, saldo e tendências comparativas.
+                </p>
+              </div>
+
+              {/* Streak */}
+              <div className="shrink-0 flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl"
+                style={{ background: `${strokeColor}12`, border: `1px solid ${strokeColor}30` }}>
+                <motion.span
+                  className="text-2xl leading-none"
+                  initial={{ scale: streakIsNew ? 0.5 : 1 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 300, delay: 0.5 }}
+                >🔥</motion.span>
+                <span className="text-lg font-black leading-none" style={{ color: strokeColor }}>{streak}</span>
+                <span className="text-[8px] font-bold text-white/40 uppercase tracking-wider">
+                  {streak === 1 ? 'dia' : 'dias'}
+                </span>
+              </div>
+            </motion.div>
+          );
+        })()}
+
+        {/* ── Metas ── */}
+        {goals.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+            className="glass-card rounded-[1.75rem] p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-black text-sm text-white">Metas do mês</h3>
+              <button onClick={() => setShowGoalModal(true)}
+                className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full transition-all active:scale-95"
+                style={{ background: `${isWarm ? '#e8a020' : '#0ea5e9'}18`, color: isWarm ? '#e8a020' : '#0ea5e9', border: `1px solid ${isWarm ? '#e8a020' : '#0ea5e9'}30` }}>
+                <Plus size={12} /> Meta
+              </button>
+            </div>
+            {goals.filter(g => g.status === 'active' || g.status === 'done').map(goal => {
+              const pct = goal.target_amount > 0 ? Math.min(100, Math.round((goal.current_amount / goal.target_amount) * 100)) : 0;
+              const barColor = goal.status === 'done'
+                ? (isWarm ? '#e8a020' : '#10b981')
+                : pct >= 80 ? (isWarm ? '#c49a4a' : '#22d3ee')
+                : pct >= 50 ? (isWarm ? '#b8730a' : '#0ea5e9')
+                : (isWarm ? '#7c4a2d' : '#6366f1');
+              return (
+                <div key={goal.id} className="flex items-center gap-3">
+                  <span className="text-xl shrink-0">{goal.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-white truncate max-w-[60%]">{goal.title}</span>
+                      <span className="text-[10px] font-bold shrink-0 ml-1" style={{ color: barColor }}>
+                        {goal.status === 'done' ? '✓ Concluída' : `${pct}%`}
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                      <motion.div className="h-full rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        style={{ background: barColor }} />
+                    </div>
+                    <div className="flex justify-between mt-0.5">
+                      <span className="text-[9px] text-white/30">{maskBRL(goal.current_amount)}</span>
+                      <span className="text-[9px] text-white/30">meta {maskBRL(goal.target_amount)}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+
+        {/* Botão adicionar meta quando não há metas */}
+        {goals.length === 0 && (
+          <motion.button
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+            onClick={() => setShowGoalModal(true)}
+            className="glass-card rounded-[1.75rem] p-4 flex items-center gap-3 w-full text-left transition-all hover:opacity-80 active:scale-[0.98]">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ background: `${isWarm ? '#e8a020' : '#0ea5e9'}15` }}>
+              <span className="text-xl">🎯</span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">Defina uma meta financeira</p>
+              <p className="text-[11px] text-white/40">Acompanhe seu progresso mês a mês</p>
+            </div>
+            <Plus size={16} className="ml-auto shrink-0 text-white/40" />
+          </motion.button>
         )}
 
         {/* Intro placeholder — kept to align existing sections below */}
@@ -3197,6 +3513,17 @@ export default function Dashboard({ user }) {
             onClose={() => setEditModal(null)}
             onSave={handleEditSave}
             userCategories={userCategories}
+            userPlan={userPlan}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Goal Add Modal */}
+      <AnimatePresence>
+        {showGoalModal && (
+          <GoalAddModal
+            onClose={() => setShowGoalModal(false)}
+            onSave={addGoal}
             userPlan={userPlan}
           />
         )}
