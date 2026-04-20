@@ -18,7 +18,8 @@ import {
   SlidersHorizontal, ArrowUp, ArrowDown, Upload,
   CheckCircle, Archive, Clock,
   Home, LayoutList, BarChart2, User, Bell, Settings, Lock, HelpCircle,
-  Crown, Star, TrendingUp as TrendUpIcon, BrainCircuit
+  Crown, Star, TrendingUp as TrendUpIcon, BrainCircuit,
+  Target, Flame, Trophy, Award, Gem
 } from 'lucide-react';
 import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 import { useSEO } from '../hooks/useSEO';
@@ -98,18 +99,18 @@ const STREAK_MILESTONES = [
 
 // ── Achievements / Badges ──
 const BADGES_DEF = [
-  { id: 'first_import',  icon: '🌱', name: 'Primeiro Extrato',   desc: 'Importou o primeiro arquivo financeiro',        rarity: 'common'   },
-  { id: 'first_mission', icon: '🎯', name: 'Missão Aceita',       desc: 'Criou sua primeira missão financeira',          rarity: 'common'   },
-  { id: 'streak_3',      icon: '🔥', name: '3 Dias Seguidos',     desc: 'Manteve a sequência por 3 dias',                rarity: 'common'   },
-  { id: 'streak_7',      icon: '⚡', name: 'Uma Semana Inteira',  desc: 'Abriu o app todos os dias por 7 dias',          rarity: 'rare'     },
-  { id: 'streak_14',     icon: '👑', name: 'Duas Semanas',        desc: 'Sequência de 14 dias sem quebrar',              rarity: 'epic'     },
-  { id: 'score_80',      icon: '💎', name: 'Score de Elite',      desc: 'Atingiu saúde financeira ≥ 80 pontos',         rarity: 'rare'     },
-  { id: 'saver',         icon: '💰', name: 'Poupador',            desc: 'Aplicações superaram as despesas no mês',      rarity: 'epic'     },
-  { id: 'mission_done',  icon: '🏆', name: 'Missão Cumprida',     desc: 'Completou uma missão com sucesso',              rarity: 'rare'     },
+  { id: 'first_import',  Icon: Upload,    name: 'Primeiro Extrato',   desc: 'Importou o primeiro arquivo financeiro',       rarity: 'common' },
+  { id: 'first_mission', Icon: Target,    name: 'Missão Aceita',       desc: 'Criou sua primeira missão financeira',         rarity: 'common' },
+  { id: 'streak_3',      Icon: Flame,     name: '3 Dias Seguidos',     desc: 'Manteve a sequência por 3 dias',               rarity: 'common' },
+  { id: 'streak_7',      Icon: Zap,       name: 'Uma Semana Inteira',  desc: 'Abriu o app todos os dias por 7 dias',         rarity: 'rare'   },
+  { id: 'streak_14',     Icon: Crown,     name: 'Duas Semanas',        desc: 'Sequência de 14 dias sem quebrar',             rarity: 'epic'   },
+  { id: 'score_80',      Icon: Gem,       name: 'Score de Elite',      desc: 'Atingiu saúde financeira ≥ 80 pontos',        rarity: 'rare'   },
+  { id: 'saver',         Icon: PiggyBank, name: 'Poupador',            desc: 'Aplicações superaram as despesas no mês',     rarity: 'epic'   },
+  { id: 'mission_done',  Icon: Trophy,    name: 'Missão Cumprida',     desc: 'Completou uma missão com sucesso',             rarity: 'rare'   },
 ];
 
 const BADGE_RARITY_COLOR = {
-  common: '#94a3b8',
+  common: '#64748b',
   rare:   '#38bdf8',
   epic:   '#a855f7',
   legend: '#f59e0b',
@@ -149,8 +150,9 @@ const useBadges = () => {
 };
 
 // Toast de desbloqueio de badge
-const BadgeUnlockToast = ({ badge, isWarm }) => {
-  const rarityColor = BADGE_RARITY_COLOR[badge.rarity] || '#94a3b8';
+const BadgeUnlockToast = ({ badge }) => {
+  const rarityColor = BADGE_RARITY_COLOR[badge.rarity] || '#64748b';
+  const { Icon } = badge;
   return (
     <motion.div
       key={badge.id}
@@ -158,35 +160,41 @@ const BadgeUnlockToast = ({ badge, isWarm }) => {
       animate={{ opacity: 1, y: 0,   scale: 1    }}
       exit={{    opacity: 0, y: -40, scale: 0.9  }}
       transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-      className="fixed top-20 left-1/2 z-[9999] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl"
+      className="fixed top-20 left-1/2 z-[9999] flex items-center gap-4 px-5 py-4 rounded-2xl shadow-2xl"
       style={{
         transform: 'translateX(-50%)',
         background: 'rgba(10,14,26,0.97)',
-        border: `1.5px solid ${rarityColor}60`,
+        border: `1.5px solid ${rarityColor}50`,
         backdropFilter: 'blur(24px)',
-        minWidth: 260,
+        minWidth: 280,
       }}
     >
-      <motion.span
-        className="text-3xl"
-        initial={{ rotate: -20, scale: 0.5 }}
-        animate={{ rotate: 0, scale: 1 }}
+      {/* Ícone em círculo */}
+      <motion.div
+        className="shrink-0 rounded-2xl flex items-center justify-center"
+        initial={{ rotate: -15, scale: 0.5 }}
+        animate={{ rotate: 0,   scale: 1   }}
         transition={{ type: 'spring', stiffness: 400, delay: 0.1 }}
-      >{badge.icon}</motion.span>
+        style={{ width: 48, height: 48, background: `${rarityColor}20`, border: `1.5px solid ${rarityColor}50` }}
+      >
+        <Icon size={22} style={{ color: rarityColor }} strokeWidth={1.5} />
+      </motion.div>
+
       <div className="flex-1 min-w-0">
         <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: rarityColor }}>
-          Badge desbloqueado!
+          Conquista desbloqueada
         </p>
         <p className="text-sm font-black text-white leading-tight">{badge.name}</p>
-        <p className="text-[10px] leading-snug" style={{ color: 'rgba(255,255,255,0.55)' }}>{badge.desc}</p>
+        <p className="text-[11px] leading-snug mt-0.5" style={{ color: 'rgba(255,255,255,0.50)' }}>{badge.desc}</p>
       </div>
+
       {/* Shimmer */}
       <motion.div
         className="absolute inset-0 rounded-2xl pointer-events-none"
-        initial={{ opacity: 0.6 }}
+        initial={{ opacity: 0.5 }}
         animate={{ opacity: 0 }}
-        transition={{ duration: 1.5, delay: 0.3 }}
-        style={{ background: `radial-gradient(ellipse at 30% 50%, ${rarityColor}25, transparent 70%)` }}
+        transition={{ duration: 1.8, delay: 0.2 }}
+        style={{ background: `radial-gradient(ellipse at 20% 50%, ${rarityColor}20, transparent 65%)` }}
       />
     </motion.div>
   );
@@ -2432,32 +2440,34 @@ export default function Dashboard({ user }) {
                 {visibleBadges.map(badge => {
                   const earned = !!unlockedBadges[badge.id];
                   const rarityColor = BADGE_RARITY_COLOR[badge.rarity];
+                  const { Icon } = badge;
                   return (
                     <motion.div key={badge.id}
-                      whileHover={{ scale: 1.06 }}
-                      whileTap={{ scale: 0.97 }}
-                      className="flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl relative overflow-hidden cursor-default"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.96 }}
+                      className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-2xl relative overflow-hidden cursor-default"
                       style={{
-                        background: earned ? `${rarityColor}15` : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${earned ? rarityColor + '40' : 'rgba(255,255,255,0.07)'}`,
+                        background: earned ? `${rarityColor}12` : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${earned ? rarityColor + '35' : 'rgba(255,255,255,0.06)'}`,
                       }}
                     >
-                      {/* Shimmer nos desbloqueados */}
                       {earned && (
                         <div className="absolute inset-0 pointer-events-none"
-                          style={{ background: `radial-gradient(ellipse at 50% 0%, ${rarityColor}18, transparent 70%)` }} />
+                          style={{ background: `radial-gradient(ellipse at 50% 0%, ${rarityColor}15, transparent 70%)` }} />
                       )}
-                      <span className="text-2xl leading-none" style={{ filter: earned ? 'none' : 'grayscale(1) opacity(0.3)' }}>
-                        {badge.icon}
-                      </span>
-                      <span className="text-[9px] font-bold text-center leading-tight line-clamp-2 px-0.5"
-                        style={{ color: earned ? '#ffffff' : 'rgba(255,255,255,0.25)' }}>
+                      {/* Ícone */}
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                        style={{
+                          background: earned ? `${rarityColor}20` : 'rgba(255,255,255,0.05)',
+                          border: `1px solid ${earned ? rarityColor + '40' : 'rgba(255,255,255,0.08)'}`,
+                        }}>
+                        <Icon size={16} strokeWidth={1.75}
+                          style={{ color: earned ? rarityColor : 'rgba(255,255,255,0.2)' }} />
+                      </div>
+                      <span className="text-[9px] font-semibold text-center leading-tight line-clamp-2 px-0.5"
+                        style={{ color: earned ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.2)' }}>
                         {badge.name}
                       </span>
-                      {earned && (
-                        <div className="w-1.5 h-1.5 rounded-full absolute top-1.5 right-1.5"
-                          style={{ background: rarityColor }} />
-                      )}
                     </motion.div>
                   );
                 })}
@@ -2474,7 +2484,7 @@ export default function Dashboard({ user }) {
                 return (
                   <div className="flex items-center gap-2 rounded-xl px-3 py-2"
                     style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <span className="text-base" style={{ filter: 'grayscale(1) opacity(0.5)' }}>{next.icon}</span>
+                    <next.Icon size={16} strokeWidth={1.75} style={{ color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
                     <div className="min-w-0">
                       <p className="text-[10px] font-bold text-white/50 leading-tight">Próxima conquista</p>
                       <p className="text-[11px] font-black text-white leading-tight">{next.name}</p>
