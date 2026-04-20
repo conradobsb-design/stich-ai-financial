@@ -16,7 +16,8 @@ import {
   Eye, EyeOff, Sun, Moon,
   MessageSquare, Send, Bot, ChevronDown, Landmark,
   SlidersHorizontal, ArrowUp, ArrowDown, Upload,
-  CheckCircle, Archive, Clock
+  CheckCircle, Archive, Clock,
+  Home, LayoutList, BarChart2, User, Bell, Settings, Lock, HelpCircle
 } from 'lucide-react';
 import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 import { useSEO } from '../hooks/useSEO';
@@ -749,6 +750,8 @@ export default function Dashboard({ user }) {
   const navigate = useNavigate();
 
   const { canAccess, plan: userPlan, isTrial, trialDaysLeft } = useSubscription(user?.id);
+
+  const [activeTab, setActiveTab] = useState('inicio');
 
   const [selectedMonth, setSelectedMonth] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -1691,81 +1694,84 @@ export default function Dashboard({ user }) {
         </div>
       )}
 
-      {/* Header Premium */}
-      <header className="fixed top-0 w-full z-50 glass border-b border-outline-variant pt-[max(1rem,env(safe-area-inset-top,1rem))] pb-4 px-3 sm:px-6 flex justify-between items-center transition-all">
-        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-          <motion.div whileHover={{ scale: 1.1 }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-black shadow-lg shadow-primary/20 shrink-0">
+      {/* Header */}
+      <header className="fixed top-0 w-full z-50 glass border-b border-outline-variant pt-[max(1rem,env(safe-area-inset-top,1rem))] pb-3 px-4 sm:px-6 flex justify-between items-center transition-all">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <motion.div whileHover={{ scale: 1.1 }} className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-black shadow-lg shadow-primary/20 shrink-0">
             E
           </motion.div>
-          <h1 className="text-base sm:text-xl font-black tracking-tighter text-white whitespace-nowrap">Extrato Co.</h1>
+          <h1 className="text-base sm:text-lg font-black tracking-tighter text-white whitespace-nowrap">
+            {activeTab === 'inicio' ? 'Extrato Co.' : activeTab === 'extrato' ? 'Extrato' : activeTab === 'analise' ? 'Análise' : 'Perfil'}
+          </h1>
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
-          <div className="hidden sm:flex flex-col items-end mr-2">
-            {isTrial && trialDaysLeft !== null ? (
-              <button onClick={() => navigate('/pricing')} className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full transition-all hover:opacity-80"
-                style={{ background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.3)' }}>
-                Trial · {trialDaysLeft}d restantes
-              </button>
-            ) : (
-              <button onClick={() => navigate('/pricing')} className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest hover:text-white transition-colors">
-                {userPlan === 'free' ? 'Plano Gratuito' : userPlan === 'essencial' ? 'Essencial' : userPlan === 'private' ? 'Private' : userPlan === 'family_office' ? 'Family Office' : 'Ver Planos'}
-              </button>
-            )}
-            <span className="text-xs font-medium text-white/80">{user?.email}</span>
-          </div>
-          <button
-            onClick={() => { setShowMembersModal(true); fetchMembers(); }}
-            className="hidden sm:flex p-2 sm:p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white"
-            title="Membros da conta"
-          >
-            <Users size={18} />
-          </button>
-          {/* Ocultar valores */}
-          <button
-            onClick={toggleHideValues}
-            className="p-2 sm:p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white"
-            title={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
-          >
-            {hideValues ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
+          {/* Month picker — only on Início, Extrato, Análise */}
+          {activeTab !== 'perfil' && (
+            <div className="glass p-1 rounded-xl flex items-center border border-outline-variant">
+              <Calendar className="text-primary ml-2 mr-1.5" size={14} />
+              <select
+                className="bg-transparent border-none text-white font-bold text-xs focus:ring-0 cursor-pointer pr-6 appearance-none"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+              >
+                {availableMonths.map(m => <option key={m} value={m} className="bg-surface">{formatMonth(m)}</option>)}
+              </select>
+            </div>
+          )}
 
-          {/* Tema claro / escuro */}
-          <button
-            onClick={toggleTheme}
-            className="p-2 sm:p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white"
-            title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-          >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-
-          {/* Soraya IA */}
+          {/* Bell — Soraya notifications */}
           <button
             onClick={() => canAccess('soraya') ? openSoraya() : navigate('/pricing')}
-            className="hidden sm:flex relative p-2 sm:p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-yellow-400"
-            title={canAccess('soraya') ? 'Soraya IA — Sugestões' : 'Upgrade — Plano Family Office'}
+            className="relative p-2 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-yellow-400"
+            title={canAccess('soraya') ? 'Soraya IA' : 'Upgrade'}
           >
-            <Sparkles size={18} />
+            <Bell size={17} />
             {suggestions.filter(s => s.status === 'new' && s.author_id !== user?.id).length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full text-[9px] font-black text-black flex items-center justify-center">
+              <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-yellow-400 rounded-full text-[8px] font-black text-black flex items-center justify-center">
                 {suggestions.filter(s => s.status === 'new' && s.author_id !== user?.id).length}
               </span>
             )}
           </button>
 
-          <button onClick={handleLogout} className="p-2 sm:p-2.5 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant transition-all text-on-surface-variant hover:text-white">
-            <LogOut size={18} />
+          {/* Avatar — vai para Perfil */}
+          <button
+            onClick={() => setActiveTab('perfil')}
+            className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/60 to-accent/60 border border-white/20 flex items-center justify-center text-white font-black text-xs transition-all hover:scale-105"
+            title="Perfil"
+          >
+            {user?.email?.[0]?.toUpperCase() || 'U'}
           </button>
         </div>
       </header>
 
-      <main className="pt-24 px-6 max-w-6xl mx-auto space-y-8">
-        
-        {/* Intro Section */}
-        <motion.section 
+      <main className="pt-20 px-4 sm:px-6 max-w-6xl mx-auto pb-32 space-y-6">
+
+        {/* ── TAB: INÍCIO ────────────────────────────────── */}
+        {activeTab === 'inicio' && <>
+
+        {/* Month badges */}
+        {monthFiles.length > 0 && showFileBadges && (
+          <div className="flex flex-wrap gap-1.5 pt-2">
+            {monthFiles.map(({ name, type }) => (
+              <span key={name} className="flex items-center gap-1 text-[9px] font-bold px-2 py-1 rounded-full border"
+                style={{
+                  background: type === 'credit_card' ? 'rgba(139,92,246,0.15)' : type === 'investment' ? 'rgba(0,210,255,0.15)' : 'rgba(16,185,129,0.15)',
+                  borderColor: type === 'credit_card' ? 'rgba(139,92,246,0.4)' : type === 'investment' ? 'rgba(0,210,255,0.4)' : 'rgba(16,185,129,0.4)',
+                  color: type === 'credit_card' ? '#a78bfa' : type === 'investment' ? '#00d2ff' : '#6ee7b7',
+                }}>
+                <FileText size={8} />
+                {name.length > 28 ? name.slice(0, 25) + '...' : name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Intro placeholder — kept to align existing sections below */}
+        <motion.section
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+          className="hidden"
         >
           <div>
             <h2 className="text-4xl font-extrabold tracking-tight text-white mb-1">
@@ -2160,6 +2166,11 @@ export default function Dashboard({ user }) {
 
         </motion.div>
 
+        </>} {/* end inicio tab */}
+
+        {/* ── TAB: ANÁLISE ────────────────────────────────── */}
+        {activeTab === 'analise' && <>
+
         {/* Comparative Analysis */}
         {comparativeData && (
           <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
@@ -2237,31 +2248,38 @@ export default function Dashboard({ user }) {
           </motion.section>
         )}
 
-        {/* Secondary Grid */}
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 lg:grid-cols-12 gap-6"
-        >
-          
-          {/* Charts Card */}
-          <motion.div ref={categoryChartRef} variants={itemVariants} className="lg:col-span-7">
-            <CategoryChart
-              chartData={chartData}
-              selectedCategories={categoryFilter}
-              onCategoryClick={name => {
-                setCategoryFilter(prev =>
-                  prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]
-                );
-                setTypeFilter('despesas');
-                setTimeout(() => transactionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-              }}
-            />
-          </motion.div>
+        {/* Charts Card — Análise tab */}
+        <div ref={categoryChartRef}>
+          <CategoryChart
+            chartData={chartData}
+            selectedCategories={categoryFilter}
+            onCategoryClick={name => {
+              setCategoryFilter(prev =>
+                prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]
+              );
+            }}
+          />
+        </div>
+
+        </>} {/* end analise tab */}
+
+        {/* ── TAB: EXTRATO ────────────────────────────────── */}
+        {activeTab === 'extrato' && <>
+
+        {/* Receitas / Despesas summary */}
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="glass-card rounded-2xl p-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-success/80 mb-1">Receitas</p>
+            <p className="text-xl font-black text-success">{maskBRL(aggregates.income, hideValues)}</p>
+          </div>
+          <div className="glass-card rounded-2xl p-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-error/80 mb-1">Despesas</p>
+            <p className="text-xl font-black text-error">-{maskBRL(aggregates.expense, hideValues)}</p>
+          </div>
+        </div>
 
           {/* Transactions List with Search + Filter */}
-          <motion.div ref={transactionsRef} variants={itemVariants} className="lg:col-span-5 glass-card p-4 sm:p-6 md:p-8 rounded-[2.5rem] flex flex-col">
+          <motion.div ref={transactionsRef} className="glass-card p-4 sm:p-6 rounded-[2rem] flex flex-col">
             {/* Header: Title + Search + Filter toggle */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
               <h3 className="font-black text-xl text-white">Transações</h3>
@@ -2528,8 +2546,6 @@ export default function Dashboard({ user }) {
             </div>
           </motion.div>
 
-        </motion.div>
-
         {/* Imported Files Panel */}
         {(() => {
           const fileGroups = data.reduce((acc, item) => {
@@ -2584,7 +2600,180 @@ export default function Dashboard({ user }) {
           );
         })()}
 
+        </>} {/* end extrato tab */}
+
+        {/* ── TAB: PERFIL ────────────────────────────────── */}
+        {activeTab === 'perfil' && (
+          <div className="space-y-4 pt-2">
+            {/* User card */}
+            <div className="glass-card rounded-[2rem] p-6 flex flex-col items-center gap-3 text-center">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-black text-3xl shadow-xl shadow-primary/30">
+                {user?.email?.[0]?.toUpperCase() || 'U'}
+              </div>
+              <div>
+                <p className="font-black text-white text-lg">{user?.email?.split('@')[0] || 'Usuário'}</p>
+                <p className="text-xs text-white/50">{user?.email}</p>
+              </div>
+              <button
+                onClick={() => navigate('/pricing')}
+                className="px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all hover:opacity-80"
+                style={{ background: 'rgba(130,10,209,0.2)', color: '#a855f7', border: '1px solid rgba(130,10,209,0.4)' }}
+              >
+                {userPlan === 'family_office' ? 'Family Office' : userPlan === 'private' ? 'Private' : userPlan === 'essencial' ? 'Essencial' : 'Gratuito'}
+              </button>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'Transações', value: data.length },
+                { label: 'Meses', value: availableMonths.length },
+                { label: 'Saúde', value: `${(() => { const { income, expense, savingsOut } = aggregates; const r = income > 0 ? Math.max(0, Math.min(100, Math.round(((income - expense) / income) * 40 + (savingsOut > 0 ? 30 : 0) + 30))) : 0; return r; })()}` },
+              ].map(({ label, value }) => (
+                <div key={label} className="glass-card rounded-2xl p-4 text-center">
+                  <p className="text-2xl font-black text-white">{value}</p>
+                  <p className="text-[10px] text-white/40 uppercase tracking-wider mt-0.5">{label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Conta */}
+            <div className="glass-card rounded-[1.5rem] overflow-hidden">
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/30 px-5 pt-4 pb-2">Conta</p>
+              {[
+                { icon: User, label: 'Plano & assinatura', action: () => navigate('/pricing') },
+                { icon: Users, label: 'Membros da conta', action: () => { setShowMembersModal(true); fetchMembers(); } },
+                { icon: Sparkles, label: 'Soraya IA', action: () => canAccess('soraya') ? openSoraya() : navigate('/pricing'), badge: suggestions.filter(s => s.status === 'new' && s.author_id !== user?.id).length || null },
+              ].map(({ icon: Icon, label, action, badge }) => (
+                <button key={label} onClick={action} className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-white/5 transition-colors border-t border-white/5">
+                  <div className="flex items-center gap-3">
+                    <Icon size={16} className="text-primary" />
+                    <span className="text-sm font-semibold text-white">{label}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {badge ? <span className="w-5 h-5 bg-yellow-400 rounded-full text-[9px] font-black text-black flex items-center justify-center">{badge}</span> : null}
+                    <ChevronDown size={14} className="text-white/30 -rotate-90" />
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Preferências */}
+            <div className="glass-card rounded-[1.5rem] overflow-hidden">
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/30 px-5 pt-4 pb-2">Preferências</p>
+              {[
+                { icon: theme === 'dark' ? Moon : Sun, label: theme === 'dark' ? 'Modo escuro' : 'Modo claro', toggle: toggleTheme, active: theme === 'dark' },
+                { icon: hideValues ? EyeOff : Eye, label: 'Ocultar valores', toggle: toggleHideValues, active: hideValues },
+              ].map(({ icon: Icon, label, toggle, active }) => (
+                <button key={label} onClick={toggle} className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-white/5 transition-colors border-t border-white/5">
+                  <div className="flex items-center gap-3">
+                    <Icon size={16} className="text-white/60" />
+                    <span className="text-sm font-semibold text-white">{label}</span>
+                  </div>
+                  <div className={`w-10 h-5 rounded-full transition-colors ${active ? 'bg-primary' : 'bg-white/20'} relative`}>
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${active ? 'left-5' : 'left-0.5'}`} />
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Suporte */}
+            <div className="glass-card rounded-[1.5rem] overflow-hidden">
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/30 px-5 pt-4 pb-2">Suporte</p>
+              {[
+                { icon: HelpCircle, label: 'Central de ajuda', action: () => navigate('/faq') },
+                { icon: Lock, label: 'Termos de uso', action: () => navigate('/termos') },
+              ].map(({ icon: Icon, label, action }) => (
+                <button key={label} onClick={action} className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-white/5 transition-colors border-t border-white/5">
+                  <div className="flex items-center gap-3">
+                    <Icon size={16} className="text-white/60" />
+                    <span className="text-sm font-semibold text-white">{label}</span>
+                  </div>
+                  <ChevronDown size={14} className="text-white/30 -rotate-90" />
+                </button>
+              ))}
+            </div>
+
+            {/* Sair */}
+            <button
+              onClick={handleLogout}
+              className="w-full glass-card rounded-[1.5rem] px-5 py-4 flex items-center justify-center gap-3 text-error font-black border border-error/20 hover:bg-error/10 transition-colors"
+            >
+              <LogOut size={16} />
+              Sair da conta
+            </button>
+          </div>
+        )} {/* end perfil tab */}
+
       </main>
+
+      {/* ── Bottom Navigation ────────────────────────────────── */}
+      <div className="fixed bottom-0 left-0 right-0 z-[60] px-4 pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
+        <div className="glass border border-white/10 shadow-2xl rounded-2xl flex items-center justify-around px-2 py-2">
+          {[
+            { id: 'inicio',  Icon: Home,        label: 'Início' },
+            { id: 'extrato', Icon: LayoutList,   label: 'Extrato' },
+            { id: 'analise', Icon: BarChart2,    label: 'Análise' },
+            { id: 'perfil',  Icon: User,         label: 'Perfil' },
+          ].map(({ id, Icon, label }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`flex flex-col items-center gap-1 px-5 py-2 rounded-xl transition-all ${
+                activeTab === id
+                  ? 'bg-primary/20 text-primary'
+                  : 'text-white/35 hover:text-white/60'
+              }`}
+            >
+              <Icon size={20} />
+              <span className="text-[10px] font-black uppercase tracking-wider">{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Upload FAB — only in extrato tab */}
+      {activeTab === 'extrato' && (
+        <div className="fixed bottom-[max(5.5rem,calc(env(safe-area-inset-bottom,1rem)+4.5rem))] right-5 z-[70] flex flex-col gap-2 items-end">
+          {loading ? (
+            <div className="glass border border-white/10 rounded-2xl px-4 py-3 flex items-center gap-2 text-white/70 text-xs font-bold">
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Processando...
+            </div>
+          ) : (
+            <>
+              <label htmlFor="fileInputExtrato" className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs cursor-pointer shadow-md shadow-blue-500/30 active:scale-95 transition-all">
+                <Upload size={13} /><FileText size={13} /> Extrato
+              </label>
+              <label htmlFor="fileInputCartao" className="flex items-center gap-2 bg-violet-500 hover:bg-violet-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs cursor-pointer shadow-md shadow-violet-500/30 active:scale-95 transition-all">
+                <Upload size={13} /><CreditCard size={13} /> Cartão
+              </label>
+              <label htmlFor="fileInputInvestimento" className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs cursor-pointer shadow-md shadow-cyan-500/30 active:scale-95 transition-all">
+                <Upload size={13} /><Landmark size={13} /> Invest.
+              </label>
+              <button
+                onClick={handleConnectBank}
+                disabled={pluggyConnecting}
+                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-emerald-500/30 active:scale-95 transition-all"
+              >
+                <Link size={13} /> {pluggyConnecting ? 'Conectando...' : 'Conectar banco'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Chat IA FAB — all tabs */}
+      <motion.button
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.5, type: 'spring', stiffness: 200 }}
+        onClick={() => canAccess('chat_ia') ? setShowChat(true) : navigate('/pricing')}
+        className="fixed bottom-[max(5.5rem,calc(env(safe-area-inset-bottom,1rem)+4.5rem))] left-5 z-[60] w-12 h-12 rounded-full bg-secondary hover:bg-secondary/90 text-white shadow-xl shadow-secondary/40 flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+        title={canAccess('chat_ia') ? 'Ajuda IA' : 'Chat IA — Plano Private'}
+      >
+        <MessageSquare size={20} />
+      </motion.button>
 
       {/* Members Modal */}
       <AnimatePresence>
@@ -2867,75 +3056,6 @@ export default function Dashboard({ user }) {
       <input id="fileInputExtrato"     type="file" accept=".csv,.pdf,.ofx,.jpg,.jpeg,.png" className="hidden" onChange={e => handleFileUpload(e, 'extrato')} />
       <input id="fileInputCartao"      type="file" accept=".csv,.pdf,.ofx,.jpg,.jpeg,.png" className="hidden" onChange={e => handleFileUpload(e, 'cartao')} />
       <input id="fileInputInvestimento" type="file" accept=".csv,.pdf,.ofx,.jpg,.jpeg,.png" className="hidden" onChange={e => handleFileUpload(e, 'investimento')} />
-
-      {/* QuickActionsBar (Fixed Bottom Glass) */}
-      <div className="fixed bottom-[max(2rem,env(safe-area-inset-bottom,2rem))] left-1/2 -translate-x-1/2 z-[60]">
-        <motion.div
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          className="glass p-2 rounded-2xl border border-white/10 shadow-3xl flex items-center gap-1.5"
-        >
-          {loading ? (
-            <div className="flex items-center gap-2 px-5 py-3 text-white text-sm font-bold">
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Processando...
-            </div>
-          ) : (
-            <>
-              {/* Extrato — azul */}
-              <label htmlFor="fileInputExtrato" className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-md shadow-blue-500/30">
-                <Upload size={13} />
-                <FileText size={13} />
-                <span className="hidden sm:inline">Extrato</span>
-              </label>
-
-              {/* Cartão — roxo */}
-              <label htmlFor="fileInputCartao" className="flex items-center gap-2 bg-violet-500 hover:bg-violet-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-md shadow-violet-500/30">
-                <Upload size={13} />
-                <CreditCard size={13} />
-                <span className="hidden sm:inline">Cartão</span>
-              </label>
-
-              {/* Investimentos — ciano */}
-              <label htmlFor="fileInputInvestimento" className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-md shadow-cyan-500/30">
-                <Upload size={13} />
-                <Landmark size={13} />
-                <span className="hidden sm:inline">Investimentos</span>
-              </label>
-
-              {/* Separador */}
-              <div className="w-px h-6 bg-white/10 mx-1" />
-
-              {/* Conectar banco — verde */}
-              <button
-                onClick={handleConnectBank}
-                disabled={pluggyConnecting}
-                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 shadow-md shadow-emerald-500/30"
-                title={canAccess('pluggy') ? 'Conectar banco automaticamente' : 'Disponível no plano Private'}
-              >
-                <Link size={13} />
-                <span className="hidden sm:inline">{pluggyConnecting ? 'Conectando...' : 'Conectar banco'}</span>
-              </button>
-            </>
-          )}
-        </motion.div>
-      </div>
-
-      {/* Ajuda IA — FAB flutuante canto inferior direito */}
-      <motion.button
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.5, type: 'spring', stiffness: 200 }}
-        onClick={() => canAccess('chat_ia') ? setShowChat(true) : navigate('/pricing')}
-        className="fixed bottom-[max(2rem,env(safe-area-inset-bottom,2rem))] right-8 z-[60] w-14 h-14 rounded-full bg-secondary hover:bg-secondary/90 text-white shadow-xl shadow-secondary/40 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group"
-        title={canAccess('chat_ia') ? 'Ajuda IA' : 'Chat IA — Plano Private'}
-
-      >
-        <MessageSquare size={22} />
-        <span className="absolute right-16 bg-surface border border-outline-variant text-on-surface text-xs font-bold px-3 py-1.5 rounded-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg">
-          Ajuda IA
-        </span>
-      </motion.button>
 
       {/* Edit Transaction Modal */}
       <AnimatePresence>
