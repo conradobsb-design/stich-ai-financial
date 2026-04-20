@@ -56,6 +56,33 @@ const CATEGORY_COLORS = {
   'Outros':                '#94a3b8', // cinza
 };
 
+/* Family Office — paleta exclusiva marrom/ocre/areia */
+const CATEGORY_COLORS_WARM = {
+  'Alimentação':           '#f59e0b', // amber
+  'Transporte':            '#b8730a', // dark ochre
+  'Saúde':                 '#c68642', // caramel
+  'Moradia':               '#7c4a2d', // brown
+  'Lazer':                 '#d4b28c', // sand
+  'Lazer & Entretenimento':'#d4b28c', // sand
+  'Educação':              '#cd7f32', // bronze
+  'Transferência Interna': '#8a6a50', // muted brown
+  'Investimentos':         '#e8a020', // ochre
+  'Telecomunicações':      '#c49a4a', // caramel-ochre
+  'Cartão de Crédito':     '#6b3425', // mahogany
+  'Impostos & Encargos':   '#a0522d', // sienna (mantém tom quente no lugar do vermelho)
+  'Viagem & Hospedagem':   '#f0c040', // light gold
+  'Vestuário':             '#e8c090', // light sand
+  'Pet':                   '#b87333', // copper
+  'Assinaturas':           '#d2a85a', // warm tan
+  'Serviços Financeiros':  '#a0522d', // sienna
+  'Poupança':              '#daa520', // goldenrod
+  'Casa & Utilidades':     '#8b5e3c', // warm umber
+  'Seguros':               '#d4a857', // golden sand
+  'Salário & Receitas':    '#c49a4a', // caramel (entradas)
+  'Assinaturas & SaaS':    '#b8860b', // dark goldenrod
+  'Outros':                '#8a6a50', // muted brown
+};
+
 const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
 const CHAT_URL = import.meta.env.VITE_N8N_CHAT_URL;
 
@@ -154,9 +181,10 @@ const MODALITY_LABELS = {
 const ALL_CATEGORIES = Object.keys(CATEGORY_COLORS).filter(c => c !== 'Outros').sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
 // Modal para editar modalidade + categoria de uma transação
-const EditTransactionModal = ({ item, onClose, onSave, userCategories = [] }) => {
+const EditTransactionModal = ({ item, onClose, onSave, userCategories = [], userPlan = 'free' }) => {
   const { theme } = useApp();
   const isLight = theme === 'light';
+  const isWarmModal = userPlan === 'family_office';
   const currentModality = classifyTransaction(item);
   const currentCat = smartCategory(item);
 
@@ -177,11 +205,13 @@ const EditTransactionModal = ({ item, onClose, onSave, userCategories = [] }) =>
     onClose();
   };
 
+  const savingsHex    = isWarmModal ? '#d4a855' : '#22d3ee';
+  const savingsAltHex = isWarmModal ? '#b8730a' : '#06b6d4';
   const modalityColor = {
     income:      '#4ade80',
     expense:     '#f87171',
-    savings_out: '#22d3ee',
-    savings_in:  '#22d3ee',
+    savings_out: savingsHex,
+    savings_in:  savingsHex,
   }[modality] || '#94a3b8';
 
   return (
@@ -214,8 +244,8 @@ const EditTransactionModal = ({ item, onClose, onSave, userCategories = [] }) =>
               const colors = {
                 income:      { bg: '#4ade8015', border: '#4ade8040', text: '#4ade80' },
                 expense:     { bg: '#f8717115', border: '#f8717140', text: '#f87171' },
-                savings_out: { bg: '#22d3ee15', border: '#22d3ee40', text: '#22d3ee' },
-                savings_in:  { bg: '#22d3ee10', border: '#22d3ee30', text: '#06b6d4' },
+                savings_out: { bg: `${savingsHex}15`,    border: `${savingsHex}40`,    text: savingsHex    },
+                savings_in:  { bg: `${savingsAltHex}10`, border: `${savingsAltHex}30`, text: savingsAltHex },
               }[key];
               return (
                 <button
@@ -301,30 +331,24 @@ const EditTransactionModal = ({ item, onClose, onSave, userCategories = [] }) =>
 };
 
 // Sub-component: Category Donut Chart
-const renderActiveShape = (props) => {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
-  const color = CATEGORY_COLORS[payload.name] || '#8884d8';
+const makeActiveShape = (colorMap) => (props) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, payload, percent, value } = props;
+  const color = (colorMap || CATEGORY_COLORS)[payload.name] || '#8884d8';
   return (
     <g>
-      {/* Anel expandido */}
       <Sector cx={cx} cy={cy} innerRadius={innerRadius - 5} outerRadius={outerRadius + 10}
         startAngle={startAngle} endAngle={endAngle} fill={color} opacity={1} />
-      {/* Anel externo sutil */}
       <Sector cx={cx} cy={cy} innerRadius={outerRadius + 14} outerRadius={outerRadius + 17}
         startAngle={startAngle} endAngle={endAngle} fill={color} opacity={0.4} />
-      {/* Centro: nome */}
       <text x={cx} y={cy - 22} textAnchor="middle" fill="#f8fafc" fontSize={13} fontWeight={700}>
         {payload.name}
       </text>
-      {/* Centro: valor */}
       <text x={cx} y={cy + 2} textAnchor="middle" fill="#f8fafc" fontSize={18} fontWeight={900}>
         {`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
       </text>
-      {/* Centro: % */}
       <text x={cx} y={cy + 22} textAnchor="middle" fill={color} fontSize={12} fontWeight={700}>
         {`${(percent * 100).toFixed(1)}% das saídas`}
       </text>
-      {/* Centro: qtd */}
       <text x={cx} y={cy + 40} textAnchor="middle" fill="rgba(248,250,252,0.4)" fontSize={11}>
         {`${payload.count} transaç${payload.count === 1 ? 'ão' : 'ões'}`}
       </text>
@@ -332,9 +356,10 @@ const renderActiveShape = (props) => {
   );
 };
 
-const CategoryChart = ({ chartData, onCategoryClick, selectedCategories }) => {
+const CategoryChart = ({ chartData, onCategoryClick, selectedCategories, colorMap = CATEGORY_COLORS }) => {
   const [activeIndex, setActiveIndex] = React.useState(null);
   const total = chartData.reduce((s, d) => s + d.value, 0);
+  const activeShape = React.useMemo(() => makeActiveShape(colorMap), [colorMap]);
 
   return (
     <div className="glass-card p-4 sm:p-6 md:p-8 rounded-[2.5rem] h-full">
@@ -361,14 +386,14 @@ const CategoryChart = ({ chartData, onCategoryClick, selectedCategories }) => {
                   dataKey="value"
                   stroke="none"
                   activeIndex={activeIndex}
-                  activeShape={renderActiveShape}
+                  activeShape={activeShape}
                   onMouseEnter={(_, i) => setActiveIndex(i)}
                   onMouseLeave={() => setActiveIndex(null)}
                   onClick={(_, i) => onCategoryClick?.(chartData[i]?.name)}
                   style={{ cursor: 'pointer' }}
                 >
                   {chartData.map((entry, i) => (
-                    <Cell key={i} fill={CATEGORY_COLORS[entry.name] || '#8884d8'} opacity={activeIndex === null || activeIndex === i ? 1 : 0.35} />
+                    <Cell key={i} fill={colorMap[entry.name] || '#8884d8'} opacity={activeIndex === null || activeIndex === i ? 1 : 0.35} />
                   ))}
                 </Pie>
               </PieChart>
@@ -389,7 +414,7 @@ const CategoryChart = ({ chartData, onCategoryClick, selectedCategories }) => {
           <div className="space-y-2">
             {chartData.map((item, i) => {
               const pct = total > 0 ? (item.value / total) * 100 : 0;
-              const color = CATEGORY_COLORS[item.name] || '#8884d8';
+              const color = colorMap[item.name] || '#8884d8';
               return (
                 <div
                   key={i}
@@ -432,7 +457,8 @@ const CategoryChart = ({ chartData, onCategoryClick, selectedCategories }) => {
 };
 
 // Sub-component: Health Gauge — 7 dimensões ponderadas
-const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories, comparativeData }) => {
+const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories, comparativeData, userPlan = 'free' }) => {
+  const isWarmHealth = userPlan === 'family_office';
   // D1: Taxa de Gastos (25%)
   const expRatio = income > 0 ? expense / income : (expense > 0 ? 1 : 0);
   const d1 = expRatio <= 0.50 ? 100 : expRatio <= 0.70 ? 80 : expRatio <= 0.85 ? 55 : expRatio <= 1.00 ? 25 : 0;
@@ -478,12 +504,17 @@ const HealthIndicator = ({ income, expense, savingsIn, savingsOut, topCategories
 
   const score = Math.round(d1*0.25 + d2*0.20 + d3*0.15 + d4*0.10 + d5*0.15 + d6*0.10 + d7*0.05);
 
-  const { color, stroke, msg } =
-    score >= 80 ? { color: 'text-success',   stroke: '#10b981', msg: 'Excelente' } :
-    score >= 60 ? { color: 'text-cyan-400',  stroke: '#22d3ee', msg: 'Bom'       } :
-    score >= 40 ? { color: 'text-yellow-400',stroke: '#facc15', msg: 'Atenção'   } :
-    score >= 20 ? { color: 'text-orange-400',stroke: '#fb923c', msg: 'Risco'     } :
-                  { color: 'text-error',      stroke: '#ef4444', msg: 'Crítico'   };
+  const { color, stroke, msg } = isWarmHealth
+    ? (score >= 80 ? { color: 'text-primary',       stroke: '#e8a020', msg: 'Excelente' } :
+       score >= 60 ? { color: 'text-primary/70',    stroke: '#c49a4a', msg: 'Bom'       } :
+       score >= 40 ? { color: 'text-yellow-400',    stroke: '#facc15', msg: 'Atenção'   } :
+       score >= 20 ? { color: 'text-orange-400',    stroke: '#fb923c', msg: 'Risco'     } :
+                     { color: 'text-error',          stroke: '#ef4444', msg: 'Crítico'   })
+    : (score >= 80 ? { color: 'text-success',        stroke: '#10b981', msg: 'Excelente' } :
+       score >= 60 ? { color: 'text-cyan-400',       stroke: '#22d3ee', msg: 'Bom'       } :
+       score >= 40 ? { color: 'text-yellow-400',     stroke: '#facc15', msg: 'Atenção'   } :
+       score >= 20 ? { color: 'text-orange-400',     stroke: '#fb923c', msg: 'Risco'     } :
+                     { color: 'text-error',           stroke: '#ef4444', msg: 'Crítico'   });
 
   const dims = [
     { label: 'Gastos',       pts: d1, tip: `Taxa de gastos: ${(expRatio*100).toFixed(0)}% da renda virou despesa. Meta: abaixo de 70%. Acima de 100% significa que você gastou mais do que recebeu.` },
@@ -783,6 +814,15 @@ export default function Dashboard({ user }) {
   const navigate = useNavigate();
 
   const { canAccess, plan: userPlan, isTrial, trialDaysLeft } = useSubscription(user?.id);
+  const isWarm = userPlan === 'family_office';
+  const categoryColors = isWarm ? CATEGORY_COLORS_WARM : CATEGORY_COLORS;
+  // Inline style color tokens for this plan
+  const pc = {
+    savings:    isWarm ? '#d4a855' : '#22d3ee',
+    savingsAlt: isWarm ? '#b8730a' : '#06b6d4',
+    success:    isWarm ? '#c49a4a' : '#10b981',
+    accent:     isWarm ? '#e8a020' : '#00d2ff',
+  };
 
   // Apply plan-based palette to CSS custom properties
   useEffect(() => {
@@ -1966,7 +2006,7 @@ export default function Dashboard({ user }) {
                   }}
                   className="group/card text-left glass p-3 rounded-2xl border border-transparent hover:border-cyan-400/40 hover:bg-cyan-400/5 active:scale-95 transition-all cursor-pointer flex flex-col gap-2"
                 >
-                  <div className="flex items-center gap-1.5 font-bold text-[9px] uppercase tracking-widest" style={{ color: '#00d2ff' }}>
+                  <div className="flex items-center gap-1.5 font-bold text-[9px] uppercase tracking-widest" style={{ color: pc.accent }}>
                     <PiggyBank size={11} /> Cofrinho
                   </div>
 
@@ -1982,7 +2022,7 @@ export default function Dashboard({ user }) {
                   </div>
 
                   <div className="border-t border-white/10 pt-1.5 flex items-center justify-between">
-                    <span className="text-[9px] font-bold" style={{ color: '#00d2ff99' }}>Saldo líquido</span>
+                    <span className="text-[9px] font-bold" style={{ color: `${pc.accent}99` }}>Saldo líquido</span>
                     <span className="text-sm font-black flex items-center gap-0.5" style={{
                       color: aggregates.savingsNet <= 0 ? '#4ade80' : '#f87171'
                     }}>
@@ -2040,15 +2080,21 @@ export default function Dashboard({ user }) {
 
                 // Cor de status (ponto indicador)
                 const statusDot = {
-                  success: '#4ade80',
+                  success: isWarm ? '#c49a4a' : '#4ade80',
                   error:   '#f87171',
                   warning: '#facc15',
-                  primary: '#818cf8',
-                  neutral: '#64748b',
+                  primary: isWarm ? '#e8a020' : '#818cf8',
+                  neutral: isWarm ? '#8a6a50' : '#64748b',
                 };
 
                 // Cor de acento distinta por slot (P1→P5), independente do status
-                const slotAccents = [
+                const slotAccents = isWarm ? [
+                  { color: '#e8a020', bg: 'rgba(232,160,32,0.06)',  border: 'rgba(232,160,32,0.22)'  }, // ochre    — Curto prazo
+                  { color: '#b8730a', bg: 'rgba(184,115,10,0.06)',  border: 'rgba(184,115,10,0.22)'  }, // dark ochre — Médio prazo
+                  { color: '#7c4a2d', bg: 'rgba(124,74,45,0.06)',   border: 'rgba(124,74,45,0.22)'   }, // brown    — Longo prazo
+                  { color: '#f59e0b', bg: 'rgba(245,158,11,0.06)',  border: 'rgba(245,158,11,0.22)'  }, // amber    — Concentração
+                  { color: '#c49a4a', bg: 'rgba(196,154,74,0.06)',  border: 'rgba(196,154,74,0.22)'  }, // caramel  — Equilíbrio
+                ] : [
                   { color: '#22d3ee', bg: 'rgba(34,211,238,0.06)',  border: 'rgba(34,211,238,0.22)'  }, // cyan   — Curto prazo
                   { color: '#a78bfa', bg: 'rgba(167,139,250,0.06)', border: 'rgba(167,139,250,0.22)' }, // violet — Médio prazo
                   { color: '#6366f1', bg: 'rgba(99,102,241,0.06)',  border: 'rgba(99,102,241,0.22)'  }, // indigo — Longo prazo
@@ -2069,20 +2115,27 @@ export default function Dashboard({ user }) {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between mb-3 gap-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
-                          style={{ background: `${PLAN_THEMES.private.color}18`, border: `1px solid ${PLAN_THEMES.private.color}40` }}>
-                          <TrendUpIcon size={13} style={{ color: PLAN_THEMES.private.color }} />
-                        </div>
+                        {(() => {
+                          const projC = (PLAN_THEMES[userPlan] || PLAN_THEMES.private).color;
+                          return (
+                            <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
+                              style={{ background: `${projC}18`, border: `1px solid ${projC}40` }}>
+                              <TrendUpIcon size={13} style={{ color: projC }} />
+                            </div>
+                          );
+                        })()}
                         <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/70 flex items-center gap-2">
                           Projeções
                           <PlanBadge requiredPlan="private" currentPlan={userPlan} />
                         </p>
                       </div>
                       <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
-                        usingProphet
+                        usingProphet && !isWarm
                           ? 'text-violet-400 border-violet-400/30 bg-violet-400/10'
+                          : usingProphet && isWarm
+                          ? ''
                           : 'text-white/20 border-white/10 bg-transparent'
-                      }`}>
+                      }`} style={usingProphet && isWarm ? { color: pc.accent, borderColor: `${pc.accent}40`, backgroundColor: `${pc.accent}15` } : undefined}>
                         {prophetLoading ? '⟳ calculando...' : source}
                       </span>
                     </div>
@@ -2155,6 +2208,7 @@ export default function Dashboard({ user }) {
                 savingsOut={aggregates.savingsOut}
                 topCategories={topCategories}
                 comparativeData={comparativeData}
+                userPlan={userPlan}
               />
             </div>
 
@@ -2295,7 +2349,7 @@ export default function Dashboard({ user }) {
                           className="h-full rounded-full transition-all duration-700"
                           style={{
                             width: `${Math.min(100, d.curr.expense > 0 && d.curr.income > 0 ? (d.curr.expense / d.curr.income) * 100 : 0)}%`,
-                            background: d.curr.expense / d.curr.income > 0.9 ? '#ef4444' : d.curr.expense / d.curr.income > 0.7 ? '#facc15' : '#10b981'
+                            background: d.curr.expense / d.curr.income > 0.9 ? '#ef4444' : d.curr.expense / d.curr.income > 0.7 ? '#facc15' : pc.success
                           }}
                         />
                       </div>
@@ -2314,6 +2368,7 @@ export default function Dashboard({ user }) {
         <div ref={categoryChartRef}>
           <CategoryChart
             chartData={chartData}
+            colorMap={categoryColors}
             selectedCategories={categoryFilter}
             onCategoryClick={name => {
               setCategoryFilter(prev =>
@@ -2544,9 +2599,9 @@ export default function Dashboard({ user }) {
                     }[cls] || { icon: <TrendingDown size={18} />, amountColor: 'text-error' };
 
                     // Despesas usam cor da categoria; entradas/investimentos mantêm cor semântica
-                    const iconColor   = cls === 'expense' ? catColor : cls === 'income' ? '#4ade80' : '#22d3ee';
-                    const borderColor = cls === 'expense' ? `${catColor}25` : cls === 'income' ? 'rgba(74,222,128,0.15)' : 'rgba(34,211,238,0.15)';
-                    const bgColor     = cls === 'expense' ? `${catColor}08` : cls === 'income' ? 'rgba(74,222,128,0.06)' : 'rgba(34,211,238,0.06)';
+                    const iconColor   = cls === 'expense' ? catColor : cls === 'income' ? '#4ade80' : pc.savings;
+                    const borderColor = cls === 'expense' ? `${catColor}25` : cls === 'income' ? 'rgba(74,222,128,0.15)' : `${pc.savings}26`;
+                    const bgColor     = cls === 'expense' ? `${catColor}08` : cls === 'income' ? 'rgba(74,222,128,0.06)' : `${pc.savings}0f`;
 
                     const isProjected = item.metadata?.projetado === true;
                     return (
@@ -2676,13 +2731,18 @@ export default function Dashboard({ user }) {
                 <p className="font-black text-white text-lg">{user?.email?.split('@')[0] || 'Usuário'}</p>
                 <p className="text-xs text-white/50">{user?.email}</p>
               </div>
-              <button
-                onClick={() => navigate('/pricing')}
-                className="px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all hover:opacity-80"
-                style={{ background: 'rgba(130,10,209,0.2)', color: '#a855f7', border: '1px solid rgba(130,10,209,0.4)' }}
-              >
-                {userPlan === 'family_office' ? 'Family Office' : userPlan === 'private' ? 'Private' : userPlan === 'essencial' ? 'Essencial' : 'Gratuito'}
-              </button>
+              {(() => {
+                const pt = PLAN_THEMES[userPlan] || PLAN_THEMES.free;
+                return (
+                  <button
+                    onClick={() => navigate('/pricing')}
+                    className="px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all hover:opacity-80"
+                    style={{ background: `${pt.color}22`, color: pt.colorLight, border: `1px solid ${pt.color}50` }}
+                  >
+                    {pt.label}
+                  </button>
+                );
+              })()}
             </div>
 
             {/* Stats */}
@@ -2743,13 +2803,22 @@ export default function Dashboard({ user }) {
             <div className="glass-card rounded-[1.5rem] overflow-hidden">
               <p className="text-[10px] font-black uppercase tracking-widest text-white/30 px-5 pt-4 pb-2">Suporte</p>
               {[
+                {
+                  icon: Mail,
+                  label: 'Falar com suporte',
+                  sublabel: 'suporte@extratobancario.cortezgroup.com.br',
+                  action: () => window.open('mailto:suporte@extratobancario.cortezgroup.com.br?subject=Suporte%20Extrato%20Co.', '_blank'),
+                },
                 { icon: HelpCircle, label: 'Central de ajuda', action: () => navigate('/faq') },
                 { icon: Lock, label: 'Termos de uso', action: () => navigate('/termos') },
-              ].map(({ icon: Icon, label, action }) => (
+              ].map(({ icon: Icon, label, sublabel, action }) => (
                 <button key={label} onClick={action} className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-white/5 transition-colors border-t border-white/5">
                   <div className="flex items-center gap-3">
-                    <Icon size={16} className="text-white/60" />
-                    <span className="text-sm font-semibold text-white">{label}</span>
+                    <Icon size={16} className="text-primary" />
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold text-white">{label}</span>
+                      {sublabel && <span className="text-[10px] text-white/40">{sublabel}</span>}
+                    </div>
                   </div>
                   <ChevronDown size={14} className="text-white/30 -rotate-90" />
                 </button>
@@ -2834,7 +2903,7 @@ export default function Dashboard({ user }) {
         className="fixed bottom-[max(5.5rem,calc(env(safe-area-inset-bottom,1rem)+4.5rem))] left-5 z-[60] w-12 h-12 rounded-full bg-secondary hover:bg-secondary/90 text-white shadow-xl shadow-secondary/40 flex items-center justify-center transition-all hover:scale-110 active:scale-95"
         title={canAccess('chat_ia') ? 'Ajuda IA' : 'Chat IA — Plano Private'}
       >
-        <MessageSquare size={20} />
+        <BrainCircuit size={20} />
       </motion.button>
 
       {/* Members Modal */}
@@ -3127,6 +3196,7 @@ export default function Dashboard({ user }) {
             onClose={() => setEditModal(null)}
             onSave={handleEditSave}
             userCategories={userCategories}
+            userPlan={userPlan}
           />
         )}
       </AnimatePresence>
