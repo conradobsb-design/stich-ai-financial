@@ -82,8 +82,9 @@ const CATEGORY_RULES = [
 let _userCategoryRules = [];
 
 function smartCategory(item) {
+  // Manually-set category always wins — never override with rules
+  if (item.metadata?.category_manual && item.category) return item.category;
   const desc = (item.description || '').toLowerCase();
-  // User rules take priority over everything
   for (const rule of _userCategoryRules) {
     if (desc.includes(rule.keyword.toLowerCase())) return rule.category;
   }
@@ -972,7 +973,7 @@ export default function Dashboard({ user }) {
 
   const handleEditSave = async ({ item, modality, category, pinRule }) => {
     try {
-      const newMetadata = { ...(item.metadata || {}), modality_override: modality };
+      const newMetadata = { ...(item.metadata || {}), modality_override: modality, category_manual: true };
       await supabase
         .from('transactions')
         .update({ category, metadata: newMetadata })
