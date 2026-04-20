@@ -1754,10 +1754,11 @@ export default function Dashboard({ user }) {
         <div className="flex items-center gap-1 sm:gap-2">
           {/* Month picker — only on Início, Extrato, Análise */}
           {activeTab !== 'perfil' && (
-            <div className="glass px-2 py-1 rounded-xl flex items-center border border-outline-variant gap-1">
+            <div className="glass px-2 py-1 rounded-xl flex items-center border border-outline-variant gap-1 shrink-0">
               <Calendar className="text-primary shrink-0" size={13} />
               <select
-                className="bg-transparent border-none text-white font-black text-[11px] focus:ring-0 cursor-pointer min-w-0 w-[5rem]"
+                className="bg-transparent border-none text-white font-black text-[11px] focus:ring-0 cursor-pointer"
+                style={{ WebkitAppearance: 'none', MozAppearance: 'none', width: '4.2rem' }}
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
               >
