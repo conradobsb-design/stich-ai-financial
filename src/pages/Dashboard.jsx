@@ -96,6 +96,102 @@ const STREAK_MILESTONES = [
   { days: 100, icon: '🏆', reward: 'Maestro Financeiro',      desc: 'Badge lendário + acesso antecipado a novas funções', type: 'legend'  },
 ];
 
+// ── Achievements / Badges ──
+const BADGES_DEF = [
+  { id: 'first_import',  icon: '🌱', name: 'Primeiro Extrato',   desc: 'Importou o primeiro arquivo financeiro',        rarity: 'common'   },
+  { id: 'first_mission', icon: '🎯', name: 'Missão Aceita',       desc: 'Criou sua primeira missão financeira',          rarity: 'common'   },
+  { id: 'streak_3',      icon: '🔥', name: '3 Dias Seguidos',     desc: 'Manteve a sequência por 3 dias',                rarity: 'common'   },
+  { id: 'streak_7',      icon: '⚡', name: 'Uma Semana Inteira',  desc: 'Abriu o app todos os dias por 7 dias',          rarity: 'rare'     },
+  { id: 'streak_14',     icon: '👑', name: 'Duas Semanas',        desc: 'Sequência de 14 dias sem quebrar',              rarity: 'epic'     },
+  { id: 'score_80',      icon: '💎', name: 'Score de Elite',      desc: 'Atingiu saúde financeira ≥ 80 pontos',         rarity: 'rare'     },
+  { id: 'saver',         icon: '💰', name: 'Poupador',            desc: 'Aplicações superaram as despesas no mês',      rarity: 'epic'     },
+  { id: 'mission_done',  icon: '🏆', name: 'Missão Cumprida',     desc: 'Completou uma missão com sucesso',              rarity: 'rare'     },
+];
+
+const BADGE_RARITY_COLOR = {
+  common: '#94a3b8',
+  rare:   '#38bdf8',
+  epic:   '#a855f7',
+  legend: '#f59e0b',
+};
+
+const useBadges = () => {
+  const [unlocked, setUnlocked] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('co_badges') || '{}'); } catch { return {}; }
+  });
+  const [newBadge, setNewBadge] = React.useState(null);
+
+  const checkAndUnlock = React.useCallback((conditions = {}) => {
+    // conditions: { hasImport, hasMission, streak, score, savingsOut, income, missionDone }
+    const toUnlock = BADGES_DEF.filter(b => {
+      if (unlocked[b.id]) return false;
+      if (b.id === 'first_import'  && conditions.hasImport)           return true;
+      if (b.id === 'first_mission' && conditions.hasMission)          return true;
+      if (b.id === 'streak_3'      && (conditions.streak || 0) >= 3)  return true;
+      if (b.id === 'streak_7'      && (conditions.streak || 0) >= 7)  return true;
+      if (b.id === 'streak_14'     && (conditions.streak || 0) >= 14) return true;
+      if (b.id === 'score_80'      && (conditions.score  || 0) >= 80) return true;
+      if (b.id === 'saver'         && conditions.savingsOut > 0 && conditions.savingsOut > (conditions.income || 0)) return true;
+      if (b.id === 'mission_done'  && conditions.missionDone)         return true;
+      return false;
+    });
+    if (!toUnlock.length) return;
+    const next = toUnlock[0];
+    const now  = new Date().toISOString();
+    const updated = { ...unlocked, [next.id]: { unlockedAt: now } };
+    setUnlocked(updated);
+    localStorage.setItem('co_badges', JSON.stringify(updated));
+    setNewBadge(next);
+    setTimeout(() => setNewBadge(null), 4200);
+  }, [unlocked]);
+
+  return { unlocked, newBadge, checkAndUnlock };
+};
+
+// Toast de desbloqueio de badge
+const BadgeUnlockToast = ({ badge, isWarm }) => {
+  const rarityColor = BADGE_RARITY_COLOR[badge.rarity] || '#94a3b8';
+  return (
+    <motion.div
+      key={badge.id}
+      initial={{ opacity: 0, y: -60, scale: 0.85 }}
+      animate={{ opacity: 1, y: 0,   scale: 1    }}
+      exit={{    opacity: 0, y: -40, scale: 0.9  }}
+      transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+      className="fixed top-20 left-1/2 z-[9999] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl"
+      style={{
+        transform: 'translateX(-50%)',
+        background: 'rgba(10,14,26,0.97)',
+        border: `1.5px solid ${rarityColor}60`,
+        backdropFilter: 'blur(24px)',
+        minWidth: 260,
+      }}
+    >
+      <motion.span
+        className="text-3xl"
+        initial={{ rotate: -20, scale: 0.5 }}
+        animate={{ rotate: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 400, delay: 0.1 }}
+      >{badge.icon}</motion.span>
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: rarityColor }}>
+          Badge desbloqueado!
+        </p>
+        <p className="text-sm font-black text-white leading-tight">{badge.name}</p>
+        <p className="text-[10px] leading-snug" style={{ color: 'rgba(255,255,255,0.55)' }}>{badge.desc}</p>
+      </div>
+      {/* Shimmer */}
+      <motion.div
+        className="absolute inset-0 rounded-2xl pointer-events-none"
+        initial={{ opacity: 0.6 }}
+        animate={{ opacity: 0 }}
+        transition={{ duration: 1.5, delay: 0.3 }}
+        style={{ background: `radial-gradient(ellipse at 30% 50%, ${rarityColor}25, transparent 70%)` }}
+      />
+    </motion.div>
+  );
+};
+
 // === SMART AUTO-CATEGORIZATION ===
 const CATEGORY_RULES = [
   { cat: 'Investimentos',        keywords: ['cdb', 'tesouro', 'fundo', 'aplicação', 'aplicacao', 'poupança', 'poupanca', 'resgate', 'rendimento', 'remuner', 'renda fixa', 'lci', 'lca', 'debenture', 'debênture', 'ações', 'acoes', 'btc', 'cripto', 'xp invest', 'rico invest', 'clear invest', 'modal invest', 'inter invest', 'nuinvest'] },
@@ -1123,6 +1219,8 @@ export default function Dashboard({ user }) {
   const [editModal, setEditModal] = useState(null); // transaction item being edited
   const [showGoalModal, setShowGoalModal] = useState(false);
   const { goals, addGoal, updateGoalProgress } = useGoals(effectiveUserId);
+  const { unlocked: unlockedBadges, newBadge, checkAndUnlock } = useBadges();
+  const [showAllBadges, setShowAllBadges] = useState(false);
   const [streakTooltipRect, setStreakTooltipRect] = useState(null);
   const streakRef = useRef(null);
 
@@ -1714,6 +1812,26 @@ export default function Dashboard({ user }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthlyData, aggregates]);
 
+  // Auto-check badges
+  useEffect(() => {
+    if (!data.length || !aggregates.income) return;
+    const { score } = calcHealthScore({
+      income: aggregates.income, expense: aggregates.expense,
+      savingsIn: aggregates.savingsIn, savingsOut: aggregates.savingsOut,
+      topCategories, comparativeData: comparativeData || null,
+    });
+    checkAndUnlock({
+      hasImport:   data.length > 0,
+      hasMission:  goals.length > 0,
+      streak,
+      score,
+      savingsOut:  aggregates.savingsOut,
+      income:      aggregates.income,
+      missionDone: goals.some(g => g.status === 'done'),
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.length, aggregates, streak, goals]);
+
   const chartData = useMemo(() => {
     const agg = {};
     monthlyData.forEach(item => {
@@ -2285,6 +2403,92 @@ export default function Dashboard({ user }) {
             <Plus size={16} className="ml-auto shrink-0 text-white/40" />
           </motion.button>
         )}
+
+        {/* ── Conquistas ── */}
+        {(() => {
+          const earnedCount = BADGES_DEF.filter(b => unlockedBadges[b.id]).length;
+          const visibleBadges = showAllBadges ? BADGES_DEF : BADGES_DEF.slice(0, 4);
+          return (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              className="glass-card rounded-[1.75rem] p-4 flex flex-col gap-3">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-black text-sm text-white">Conquistas</h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ background: `${isWarm ? '#e8a020' : '#0ea5e9'}20`, color: isWarm ? '#e8a020' : '#0ea5e9' }}>
+                    {earnedCount}/{BADGES_DEF.length}
+                  </span>
+                </div>
+                <button onClick={() => setShowAllBadges(v => !v)}
+                  className="text-[10px] font-bold transition-colors"
+                  style={{ color: isWarm ? '#e8a020' : '#0ea5e9' }}>
+                  {showAllBadges ? 'Menos' : 'Ver todas'}
+                </button>
+              </div>
+
+              {/* Grid de badges */}
+              <div className="grid grid-cols-4 gap-2">
+                {visibleBadges.map(badge => {
+                  const earned = !!unlockedBadges[badge.id];
+                  const rarityColor = BADGE_RARITY_COLOR[badge.rarity];
+                  return (
+                    <motion.div key={badge.id}
+                      whileHover={{ scale: 1.06 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="flex flex-col items-center gap-1 py-2.5 px-1 rounded-2xl relative overflow-hidden cursor-default"
+                      style={{
+                        background: earned ? `${rarityColor}15` : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${earned ? rarityColor + '40' : 'rgba(255,255,255,0.07)'}`,
+                      }}
+                    >
+                      {/* Shimmer nos desbloqueados */}
+                      {earned && (
+                        <div className="absolute inset-0 pointer-events-none"
+                          style={{ background: `radial-gradient(ellipse at 50% 0%, ${rarityColor}18, transparent 70%)` }} />
+                      )}
+                      <span className="text-2xl leading-none" style={{ filter: earned ? 'none' : 'grayscale(1) opacity(0.3)' }}>
+                        {badge.icon}
+                      </span>
+                      <span className="text-[9px] font-bold text-center leading-tight line-clamp-2 px-0.5"
+                        style={{ color: earned ? '#ffffff' : 'rgba(255,255,255,0.25)' }}>
+                        {badge.name}
+                      </span>
+                      {earned && (
+                        <div className="w-1.5 h-1.5 rounded-full absolute top-1.5 right-1.5"
+                          style={{ background: rarityColor }} />
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Próximo badge a desbloquear */}
+              {(() => {
+                const next = BADGES_DEF.find(b => !unlockedBadges[b.id]);
+                if (!next) return (
+                  <p className="text-[10px] text-center font-bold" style={{ color: isWarm ? '#e8a020' : '#10b981' }}>
+                    🎉 Todas as conquistas desbloqueadas!
+                  </p>
+                );
+                return (
+                  <div className="flex items-center gap-2 rounded-xl px-3 py-2"
+                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <span className="text-base" style={{ filter: 'grayscale(1) opacity(0.5)' }}>{next.icon}</span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-white/50 leading-tight">Próxima conquista</p>
+                      <p className="text-[11px] font-black text-white leading-tight">{next.name}</p>
+                    </div>
+                    <span className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                      style={{ background: `${BADGE_RARITY_COLOR[next.rarity]}20`, color: BADGE_RARITY_COLOR[next.rarity] }}>
+                      {next.rarity}
+                    </span>
+                  </div>
+                );
+              })()}
+            </motion.div>
+          );
+        })()}
 
         {/* Intro placeholder — kept to align existing sections below */}
         <motion.section
@@ -3643,6 +3847,11 @@ export default function Dashboard({ user }) {
             userPlan={userPlan}
           />
         )}
+      </AnimatePresence>
+
+      {/* ── Badge Unlock Toast ── */}
+      <AnimatePresence>
+        {newBadge && <BadgeUnlockToast badge={newBadge} isWarm={isWarm} />}
       </AnimatePresence>
 
       {/* ── Streak Tooltip Portal — fixed, nunca clipado ── */}
