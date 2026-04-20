@@ -2364,20 +2364,6 @@ export default function Dashboard({ user }) {
           </motion.section>
         )}
 
-        {/* Charts Card — Análise tab */}
-        <div ref={categoryChartRef}>
-          <CategoryChart
-            chartData={chartData}
-            colorMap={categoryColors}
-            selectedCategories={categoryFilter}
-            onCategoryClick={name => {
-              setCategoryFilter(prev =>
-                prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]
-              );
-            }}
-          />
-        </div>
-
         </>} {/* end analise tab */}
 
         {/* ── TAB: EXTRATO ────────────────────────────────── */}
@@ -2716,6 +2702,20 @@ export default function Dashboard({ user }) {
             </motion.section>
           );
         })()}
+
+        {/* Charts Card — Extrato tab */}
+        <div ref={categoryChartRef}>
+          <CategoryChart
+            chartData={chartData}
+            colorMap={categoryColors}
+            selectedCategories={categoryFilter}
+            onCategoryClick={name => {
+              setCategoryFilter(prev =>
+                prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]
+              );
+            }}
+          />
+        </div>
 
         </>} {/* end extrato tab */}
 
