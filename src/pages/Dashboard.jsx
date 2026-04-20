@@ -447,128 +447,95 @@ const EditTransactionModal = ({ item, onClose, onSave, userCategories = [], user
   );
 };
 
-// Sub-component: Category Donut Chart
-const makeActiveShape = (colorMap) => (props) => {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, payload, percent, value } = props;
-  const color = (colorMap || CATEGORY_COLORS)[payload.name] || '#8884d8';
-  return (
-    <g>
-      <Sector cx={cx} cy={cy} innerRadius={innerRadius - 5} outerRadius={outerRadius + 10}
-        startAngle={startAngle} endAngle={endAngle} fill={color} opacity={1} />
-      <Sector cx={cx} cy={cy} innerRadius={outerRadius + 14} outerRadius={outerRadius + 17}
-        startAngle={startAngle} endAngle={endAngle} fill={color} opacity={0.4} />
-      <text x={cx} y={cy - 22} textAnchor="middle" fill="#f8fafc" fontSize={13} fontWeight={700}>
-        {payload.name}
-      </text>
-      <text x={cx} y={cy + 2} textAnchor="middle" fill="#f8fafc" fontSize={18} fontWeight={900}>
-        {`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-      </text>
-      <text x={cx} y={cy + 22} textAnchor="middle" fill={color} fontSize={12} fontWeight={700}>
-        {`${(percent * 100).toFixed(1)}% das saídas`}
-      </text>
-      <text x={cx} y={cy + 40} textAnchor="middle" fill="rgba(248,250,252,0.4)" fontSize={11}>
-        {`${payload.count} transaç${payload.count === 1 ? 'ão' : 'ões'}`}
-      </text>
-    </g>
-  );
-};
 
+// Sub-component: Category Ranked Bar List
 const CategoryChart = ({ chartData, onCategoryClick, selectedCategories, colorMap = CATEGORY_COLORS }) => {
-  const [activeIndex, setActiveIndex] = React.useState(null);
-  const total = chartData.reduce((s, d) => s + d.value, 0);
-  const activeShape = React.useMemo(() => makeActiveShape(colorMap), [colorMap]);
+  const [hovered, setHovered] = React.useState(null);
+  const [showAll, setShowAll] = React.useState(false);
+  const total    = chartData.reduce((s, d) => s + d.value, 0);
+  const maxValue = chartData[0]?.value || 1;
+  const visible  = showAll ? chartData : chartData.slice(0, 6);
+
+  if (chartData.length === 0) return (
+    <div className="glass-card p-6 rounded-[2.5rem] flex items-center justify-center h-40 text-on-surface-variant text-sm">
+      Sem despesas neste mês.
+    </div>
+  );
 
   return (
-    <div className="glass-card p-4 sm:p-6 md:p-8 rounded-[2.5rem] h-full">
-      <div className="flex items-center gap-2 mb-6">
-        <PieIcon className="text-primary" size={22} />
-        <h3 className="font-black text-xl text-white">Resumo por Categoria</h3>
-      </div>
-
-      {chartData.length === 0 ? (
-        <div className="h-64 flex items-center justify-center text-on-surface-variant text-sm">
-          Sem despesas neste mês.
+    <div className="glass-card p-4 sm:p-6 rounded-[2.5rem]">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h3 className="font-black text-lg text-white leading-tight">Categorias</h3>
+          <p className="text-[11px] text-on-surface-variant mt-0.5">
+            Total · R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </p>
         </div>
-      ) : (
-        <div className="flex flex-col gap-6">
-          {/* Donut */}
-          <div className="h-64 w-full relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%" cy="50%"
-                  innerRadius={72} outerRadius={100}
-                  paddingAngle={3}
-                  dataKey="value"
-                  stroke="none"
-                  activeIndex={activeIndex}
-                  activeShape={activeShape}
-                  onMouseEnter={(_, i) => setActiveIndex(i)}
-                  onMouseLeave={() => setActiveIndex(null)}
-                  onClick={(_, i) => onCategoryClick?.(chartData[i]?.name)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {chartData.map((entry, i) => (
-                    <Cell key={i} fill={colorMap[entry.name] || '#8884d8'} opacity={activeIndex === null || activeIndex === i ? 1 : 0.35} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Centro padrão (sem hover) */}
-            {activeIndex === null && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <p className="text-[10px] uppercase font-bold text-on-surface-variant tracking-widest mb-1">Total saídas</p>
-                <p className="text-xl font-black text-white">
-                  R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Legenda com barras */}
-          <div className="space-y-2">
-            {chartData.map((item, i) => {
-              const pct = total > 0 ? (item.value / total) * 100 : 0;
-              const color = colorMap[item.name] || '#8884d8';
-              return (
-                <div
-                  key={i}
-                  className="group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer select-none"
-                  style={{
-                    background: selectedCategories?.includes(item.name)
-                      ? `${color}22`
-                      : activeIndex === i ? `${color}15` : 'rgba(255,255,255,0.03)',
-                    boxShadow: selectedCategories?.includes(item.name) ? `inset 0 0 0 1.5px ${color}60` : 'none',
-                  }}
-                  onMouseEnter={() => setActiveIndex(i)}
-                  onMouseLeave={() => setActiveIndex(null)}
-                  onClick={() => onCategoryClick?.(item.name)}
-                  title={selectedCategories?.includes(item.name) ? 'Clique para remover filtro' : 'Clique para filtrar'}
-                >
-                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-semibold text-slate-200 truncate">{item.name}</span>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                        <span className="text-[10px] text-slate-500">{item.count} tx</span>
-                        <span className="text-xs font-bold text-white">
-                          R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </span>
-                        <span className="text-[10px] font-bold w-10 text-right" style={{ color }}>{pct.toFixed(1)}%</span>
-                      </div>
-                    </div>
-                    <div className="h-1 rounded-full bg-white/10 overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
-                    </div>
+        {chartData.length > 6 && (
+          <button onClick={() => setShowAll(v => !v)}
+            className="text-[11px] font-bold px-3 py-1.5 rounded-full"
+            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>
+            {showAll ? 'Menos' : }
+          </button>
+        )}
+      </div>
+      <div className="flex flex-col gap-0.5">
+        {visible.map((item, i) => {
+          const color    = colorMap[item.name] || '#8884d8';
+          const pct      = total > 0 ? (item.value / total) * 100 : 0;
+          const barPct   = (item.value / maxValue) * 100;
+          const isActive = selectedCategories?.includes(item.name);
+          const isHov    = hovered === i;
+          return (
+            <motion.div key={item.name}
+              initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.22, delay: i * 0.04 }}
+              className="group relative flex items-center gap-3 px-3 py-2.5 rounded-2xl cursor-pointer select-none"
+              style={{
+                background: isActive ?  : isHov ? 'rgba(255,255,255,0.05)' : 'transparent',
+                outline: isActive ?  : 'none',
+              }}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              onClick={() => onCategoryClick?.(item.name)}
+            >
+              <span className="text-[11px] font-black w-4 text-right shrink-0 tabular-nums"
+                style={{ color: i === 0 ? color : 'rgba(255,255,255,0.2)' }}>{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-semibold truncate"
+                    style={{ color: isHov || isActive ? '#ffffff' : 'rgba(255,255,255,0.75)' }}>
+                    {item.name}
+                  </span>
+                  <div className="flex items-center gap-2.5 shrink-0 ml-2">
+                    {isHov && (
+                      <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                        {item.count} tx
+                      </motion.span>
+                    )}
+                    <span className="text-xs font-bold text-white tabular-nums">
+                      R$ {item.value.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                    </span>
+                    <span className="text-[10px] font-bold w-9 text-right tabular-nums"
+                      style={{ color: isHov || isActive ? color : 'rgba(255,255,255,0.35)' }}>
+                      {pct.toFixed(1)}%
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                  <motion.div className="h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width:  }}
+                    transition={{ duration: 0.55, ease: 'easeOut', delay: i * 0.05 }}
+                    style={{ background: isHov || isActive ? color :  }}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
     </div>
   );
 };
