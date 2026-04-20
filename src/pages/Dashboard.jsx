@@ -2381,6 +2381,51 @@ export default function Dashboard({ user }) {
           </div>
         </div>
 
+        {/* ── Barra de importação horizontal ── */}
+        {loading ? (
+          <div className="glass border border-white/10 rounded-2xl px-4 py-3 flex items-center justify-center gap-2 text-white/70 text-xs font-bold">
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            Processando arquivo...
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-2">
+            <label htmlFor="fileInputExtrato"
+              className="flex flex-col items-center justify-center gap-1.5 glass-card border border-primary/20 hover:border-primary/50 hover:bg-primary/5 text-primary rounded-2xl py-3 px-2 text-[11px] font-black cursor-pointer transition-all active:scale-95 text-center">
+              <div className="flex items-center gap-1"><Upload size={13} /><FileText size={13} /></div>
+              Extrato
+            </label>
+            <label htmlFor="fileInputCartao"
+              className="flex flex-col items-center justify-center gap-1.5 glass-card border border-primary/20 hover:border-primary/50 hover:bg-primary/5 text-primary rounded-2xl py-3 px-2 text-[11px] font-black cursor-pointer transition-all active:scale-95 text-center">
+              <div className="flex items-center gap-1"><Upload size={13} /><CreditCard size={13} /></div>
+              Cartão
+            </label>
+            <label htmlFor="fileInputInvestimento"
+              className="flex flex-col items-center justify-center gap-1.5 glass-card border border-primary/20 hover:border-primary/50 hover:bg-primary/5 text-primary rounded-2xl py-3 px-2 text-[11px] font-black cursor-pointer transition-all active:scale-95 text-center">
+              <div className="flex items-center gap-1"><Upload size={13} /><Landmark size={13} /></div>
+              Invest.
+            </label>
+            <button onClick={handleConnectBank} disabled={pluggyConnecting}
+              className="flex flex-col items-center justify-center gap-1.5 glass-card border border-primary/20 hover:border-primary/50 hover:bg-primary/5 text-primary rounded-2xl py-3 px-2 text-[11px] font-black transition-all active:scale-95 disabled:opacity-50 text-center">
+              <Link size={14} />
+              {pluggyConnecting ? '...' : 'Banco'}
+            </button>
+          </div>
+        )}
+
+        {/* Resumo por Categoria */}
+        <div ref={categoryChartRef}>
+          <CategoryChart
+            chartData={chartData}
+            colorMap={categoryColors}
+            selectedCategories={categoryFilter}
+            onCategoryClick={name => {
+              setCategoryFilter(prev =>
+                prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]
+              );
+            }}
+          />
+        </div>
+
           {/* Transactions List with Search + Filter */}
           <motion.div ref={transactionsRef} className="glass-card p-4 sm:p-6 rounded-[2rem] flex flex-col">
             {/* Header: Title + Search + Filter toggle */}
@@ -2703,20 +2748,6 @@ export default function Dashboard({ user }) {
           );
         })()}
 
-        {/* Charts Card — Extrato tab */}
-        <div ref={categoryChartRef}>
-          <CategoryChart
-            chartData={chartData}
-            colorMap={categoryColors}
-            selectedCategories={categoryFilter}
-            onCategoryClick={name => {
-              setCategoryFilter(prev =>
-                prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]
-              );
-            }}
-          />
-        </div>
-
         </>} {/* end extrato tab */}
 
         {/* ── TAB: PERFIL ────────────────────────────────── */}
@@ -2863,36 +2894,6 @@ export default function Dashboard({ user }) {
         </div>
       </div>
 
-      {/* Upload FAB — only in extrato tab */}
-      {activeTab === 'extrato' && (
-        <div className="fixed bottom-[max(5.5rem,calc(env(safe-area-inset-bottom,1rem)+4.5rem))] right-5 z-[70] flex flex-col gap-2 items-end">
-          {loading ? (
-            <div className="glass border border-white/10 rounded-2xl px-4 py-3 flex items-center gap-2 text-white/70 text-xs font-bold">
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Processando...
-            </div>
-          ) : (
-            <>
-              <label htmlFor="fileInputExtrato" className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs cursor-pointer shadow-md shadow-blue-500/30 active:scale-95 transition-all">
-                <Upload size={13} /><FileText size={13} /> Extrato
-              </label>
-              <label htmlFor="fileInputCartao" className="flex items-center gap-2 bg-violet-500 hover:bg-violet-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs cursor-pointer shadow-md shadow-violet-500/30 active:scale-95 transition-all">
-                <Upload size={13} /><CreditCard size={13} /> Cartão
-              </label>
-              <label htmlFor="fileInputInvestimento" className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs cursor-pointer shadow-md shadow-cyan-500/30 active:scale-95 transition-all">
-                <Upload size={13} /><Landmark size={13} /> Invest.
-              </label>
-              <button
-                onClick={handleConnectBank}
-                disabled={pluggyConnecting}
-                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-emerald-500/30 active:scale-95 transition-all"
-              >
-                <Link size={13} /> {pluggyConnecting ? 'Conectando...' : 'Conectar banco'}
-              </button>
-            </>
-          )}
-        </div>
-      )}
 
       {/* Chat IA FAB — all tabs */}
       <motion.button
