@@ -33,6 +33,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dis
 
 const CATEGORY_COLORS = {
   'Alimentação':           '#f97316', // laranja
+  'Refeições':             '#fb923c', // laranja-claro (restaurantes & delivery)
   'Transporte':            '#3b82f6', // azul
   'Saúde':                 '#ec4899', // rosa
   'Moradia':               '#f59e0b', // âmbar
@@ -60,6 +61,7 @@ const CATEGORY_COLORS = {
 /* Family Office — paleta exclusiva marrom/ocre/areia */
 const CATEGORY_COLORS_WARM = {
   'Alimentação':           '#f59e0b', // amber
+  'Refeições':             '#d4a857', // golden sand (restaurantes & delivery)
   'Transporte':            '#b8730a', // dark ochre
   'Saúde':                 '#c68642', // caramel
   'Moradia':               '#7c4a2d', // brown
@@ -210,7 +212,8 @@ const CATEGORY_RULES = [
   { cat: 'Saúde',                keywords: ['farmacia', 'farmácia', 'drogaria', 'drogasil', 'droga', 'hospital', 'clinica', 'clínica', 'policlinica', 'policlínica', 'médico', 'medico', 'plano saude', 'plano saúde', 'unimed', 'amil', 'bradesco saude', 'hapvida', 'notredame', 'sulamerica saude', 'odonto', 'dentista', 'laboratorio', 'laboratório', 'exame', 'consulta', 'psicolog', 'terapia', 'fisioter', 'aviva'] },
   { cat: 'Educação',             keywords: ['escola', 'faculdade', 'universidade', 'mensalidade', 'colégio', 'colegio', 'colgio', 'educac', 'curso', 'treinamento', 'capacitacao', 'capacitação', 'alura', 'udemy', 'coursera', 'duolingo', 'material escolar', 'livro', 'livraria', 'lyrs'] },
   { cat: 'Viagem & Hospedagem',  keywords: ['hotel', 'hilton', 'marriott', 'airbnb', 'booking', 'passagem', 'aeroporto', 'companhia aerea', 'latam air', 'gol ', 'azul ', 'decolar', 'hurb', 'hostel', 'resort', 'pousada', 'trivago', 'hotels.com', 'localiza', 'movida', 'unidas aluguel', 'daara', 'mar de sonhos', 'dufry'] },
-  { cat: 'Alimentação',          keywords: ['ifood', 'rappi', 'uber eats', 'restaurante', 'restaurant', 'padaria', 'mercado', 'supermercado', 'lanchonete', 'delivery', 'açougue', 'acougue', 'acougues', 'hortifruti', 'sacolao', 'sacolão', 'pão de açúcar', 'carrefour', 'extra ', 'walmart', 'atacadão', 'atacadao', 'sams club', 'costco', 'pizza', 'hamburguer', 'burguer', 'sushi', 'churrascaria', 'churr', 'cafe', 'café', 'alimentos', 'gastro', 'gourmet', 'loja onlin', 'mantiqueira', 'spicy', 'marajoara', 'paes e doces', 'pães e doces', 'cbx', 'rodosnack', 'badaue', 'zig mona', 'jim.com', 't bone', 'hikari', 'pumila', 'rancho', 'tadeufelix', 'lanchonete'] },
+  { cat: 'Refeições',            keywords: ['ifood', 'rappi', 'uber eats', 'restaurante', 'restaurant', 'lanchonete', 'delivery', 'pizza', 'hamburguer', 'burguer', 'sushi', 'churrascaria', 'churr', 'cafe', 'café', 'gastro', 'gourmet', 'spicy', 'marajoara', 'zig mona', 'jim.com', 't bone', 'hikari', 'pumila', 'rancho', 'tadeufelix', 'rodosnack', 'badaue', 'cbx'] },
+  { cat: 'Alimentação',          keywords: ['padaria', 'mercado', 'supermercado', 'açougue', 'acougue', 'acougues', 'hortifruti', 'sacolao', 'sacolão', 'pão de açúcar', 'carrefour', 'extra ', 'walmart', 'atacadão', 'atacadao', 'sams club', 'costco', 'alimentos', 'loja onlin', 'mantiqueira', 'paes e doces', 'pães e doces'] },
   { cat: 'Transporte',           keywords: ['uber ', 'cabify', '99 ', 'taxi', 'estacion', 'combustivel', 'combustível', 'posto ', 'pedágio', 'pedagio', 'detran', 'ipva', 'metrô', 'metro ', 'ônibus', 'onibus', 'bilhete unico', 'bilhete único', 'bom bilhete', 'dpvat', 'licenciamento', 'denatran', 'recarga transporte', 'car wash'] },
   { cat: 'Lazer & Entretenimento', keywords: ['cinema', 'teatro', 'show', 'ingresso', 'ticketmaster', 'sympla', 'eventbrite', 'parque', 'museu', 'clube ', 'academia', 'gym', 'smartfit', 'bluefit', 'bodytech', 'jogo', 'steam', 'playstation', 'xbox', 'nintendo', 'inplay', 'iguasport', 'sport', 'operetta'] },
   { cat: 'Seguros',              keywords: ['seguro', 'sulamerica', 'porto seguro', 'bradesco seguro', 'allianz', 'tokio marine', 'mapfre', 'sompo', 'zurich', 'axa ', 'caixa seguro', 'bb seguro', 'seguro vida', 'seguro auto', 'seguro resid'] },
