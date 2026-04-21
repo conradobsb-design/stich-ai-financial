@@ -1266,11 +1266,18 @@ function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, u
         balance: aggregates.balance,
         top_categories: topCategories.map(([cat, val]) => ({ category: cat, total: val })),
       };
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: { message: question, context },
+      const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+      const res = await fetch(fnUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ message: question, context }),
       });
-      if (error) throw error;
-      const reply = data?.reply || 'Não consegui processar sua pergunta no momento.';
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const reply = json?.reply || 'Não consegui processar sua pergunta no momento.';
       setMessages(prev => [...prev, { role: 'assistant', text: reply }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', text: 'Erro ao conectar com o assistente. Tente novamente.' }]);
