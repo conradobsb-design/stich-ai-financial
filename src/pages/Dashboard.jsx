@@ -88,7 +88,7 @@ const CATEGORY_COLORS_WARM = {
 };
 
 const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
-const CHAT_URL = import.meta.env.VITE_N8N_CHAT_URL;
+// CHAT_URL mantido para compatibilidade; assistente usa supabase.functions.invoke
 
 // ── Hook Model — Milestones de Streak ──
 const STREAK_MILESTONES = [
@@ -1256,7 +1256,6 @@ function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, u
     setMessages(prev => [...prev, { role: 'user', text: question }]);
     setLoading(true);
     try {
-      if (!CHAT_URL) throw new Error('CHAT_URL_NOT_CONFIGURED');
       const context = {
         month: selectedMonth,
         income: aggregates.income,
@@ -1267,20 +1266,14 @@ function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, u
         balance: aggregates.balance,
         top_categories: topCategories.map(([cat, val]) => ({ category: cat, total: val })),
       };
-      const res = await fetch(CHAT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'chat', message: question, user_email: userEmail, context }),
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: { message: question, context },
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      const reply = json.reply || json.message || json.output || 'Não consegui processar sua pergunta no momento.';
+      if (error) throw error;
+      const reply = data?.reply || 'Não consegui processar sua pergunta no momento.';
       setMessages(prev => [...prev, { role: 'assistant', text: reply }]);
     } catch (err) {
-      const msg = err?.message === 'CHAT_URL_NOT_CONFIGURED'
-        ? 'Assistente não configurado. Contate o suporte.'
-        : 'Erro ao conectar com o assistente. Tente novamente.';
-      setMessages(prev => [...prev, { role: 'assistant', text: msg }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: 'Erro ao conectar com o assistente. Tente novamente.' }]);
     } finally {
       setLoading(false);
     }
