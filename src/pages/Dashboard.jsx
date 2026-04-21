@@ -3162,8 +3162,8 @@ export default function Dashboard({ user }) {
 
               </div>
 
-              {/* Previsões preditivas — Prophet (preferencial) ou modelos locais */}
-              {(prophetPredictions || predictions) && (canAccess('prophet') ? (() => {
+              {/* Projeções movidas para aba Análises */}
+              {false && (canAccess('prophet') ? (() => {
                 const fmt = (v) => `R$ ${Math.abs(v).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
                 const sign = (v) => v >= 0 ? '+' : '−';
 
@@ -3415,7 +3415,140 @@ export default function Dashboard({ user }) {
         {/* ── TAB: ANÁLISE ────────────────────────────────── */}
         {activeTab === 'analise' && <>
 
-        {/* Comparative Analysis */}
+        {/* ── Projeções ── */}
+        {(prophetPredictions || predictions) && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+            className="glass-card rounded-[2rem] p-4 sm:p-6">
+            {canAccess('prophet') ? (() => {
+              const fmt = (v) => `R$ ${Math.abs(v).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
+              const sign = (v) => v >= 0 ? '+' : '−';
+              const usingProphet = !!prophetPredictions;
+              const source = usingProphet ? 'Prophet · Meta AI · feriados BR' : 'Holt · Sazonalidade · Monte Carlo';
+              let items;
+              if (usingProphet) {
+                const { balance } = prophetPredictions;
+                const levels = [
+                  { data: balance.short,  label: 'Curto prazo',  horizon: balance.short.label },
+                  { data: balance.medium, label: 'Médio prazo',  horizon: balance.medium.label },
+                  { data: balance.long,   label: 'Longo prazo',  horizon: '12 meses' },
+                ];
+                items = [
+                  ...levels.map(({ data, label, horizon }) => {
+                    const level = data.base >= 0 ? 'success' : 'error';
+                    const text = `Saldo projetado: ${sign(data.base)}${fmt(data.base)} `
+                      + `(conservador ${sign(data.low)}${fmt(data.low)} · `
+                      + `otimista ${sign(data.high)}${fmt(data.high)}).`;
+                    return { label, horizon, text, level };
+                  }),
+                  ...(predictions ? [
+                    { label: 'Concentração', horizon: 'HHI',        ...predictions.p4 },
+                    { label: 'Equilíbrio',   horizon: 'Reserva 6×', ...predictions.p5 },
+                  ] : []),
+                ];
+              } else {
+                items = [
+                  { label: 'Curto prazo',  horizon: '1–3 meses',  ...predictions.p1 },
+                  { label: 'Médio prazo',  horizon: '3–6 meses',  ...predictions.p2 },
+                  { label: 'Longo prazo',  horizon: '12 meses',   ...predictions.p3 },
+                  { label: 'Concentração', horizon: 'HHI',        ...predictions.p4 },
+                  { label: 'Equilíbrio',   horizon: 'Reserva 6×', ...predictions.p5 },
+                ];
+              }
+              const statusDot = {
+                success: isWarm ? '#c49a4a' : '#4ade80',
+                error:   '#f87171', warning: '#facc15',
+                primary: isWarm ? '#e8a020' : '#818cf8',
+                neutral: isWarm ? '#8a6a50' : '#64748b',
+              };
+              const slotAccents = isWarm ? [
+                { color: '#e8a020', bg: 'rgba(232,160,32,0.06)',  border: 'rgba(232,160,32,0.22)'  },
+                { color: '#b8730a', bg: 'rgba(184,115,10,0.06)',  border: 'rgba(184,115,10,0.22)'  },
+                { color: '#7c4a2d', bg: 'rgba(124,74,45,0.06)',   border: 'rgba(124,74,45,0.22)'   },
+                { color: '#f59e0b', bg: 'rgba(245,158,11,0.06)',  border: 'rgba(245,158,11,0.22)'  },
+                { color: '#c49a4a', bg: 'rgba(196,154,74,0.06)',  border: 'rgba(196,154,74,0.22)'  },
+              ] : [
+                { color: '#22d3ee', bg: 'rgba(34,211,238,0.06)',  border: 'rgba(34,211,238,0.22)'  },
+                { color: '#a78bfa', bg: 'rgba(167,139,250,0.06)', border: 'rgba(167,139,250,0.22)' },
+                { color: '#6366f1', bg: 'rgba(99,102,241,0.06)',  border: 'rgba(99,102,241,0.22)'  },
+                { color: '#fb923c', bg: 'rgba(251,146,60,0.06)',  border: 'rgba(251,146,60,0.22)'  },
+                { color: '#34d399', bg: 'rgba(52,211,153,0.06)',  border: 'rgba(52,211,153,0.22)'  },
+              ];
+              const slotTips = [
+                'Holt Double Exponential Smoothing com índice sazonal por mês calendário. Projeta o saldo do próximo mês ajustando tendência e padrões históricos de gastos.',
+                'Índice sazonal calculado com 6+ meses de histórico. Identifica o mês de pico de gastos e projeta o saldo acumulado dos próximos 3 meses.',
+                'Monte Carlo: 1.000 simulações × 12 meses com distribuição Normal. P50 = cenário base · P10 = pessimista · P90 = otimista. Quanto mais histórico, mais preciso.',
+                'Índice Herfindahl-Hirschman (HHI). Mede diversificação: HHI < 0,20 = bem distribuído · 0,20–0,35 = moderado · > 0,35 = risco de concentração setorial.',
+                'Padrão CFP®: reserva de emergência ideal = 6× despesa mensal média. Calcula em quantos meses o superávit atual cobre essa meta de segurança.',
+              ];
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between mb-3 gap-2">
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const projC = (PLAN_THEMES[userPlan] || PLAN_THEMES.private).color;
+                        return (
+                          <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
+                            style={{ background: `${projC}18`, border: `1px solid ${projC}40` }}>
+                            <TrendUpIcon size={13} style={{ color: projC }} />
+                          </div>
+                        );
+                      })()}
+                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/70 flex items-center gap-2">
+                        Projeções
+                        <PlanBadge requiredPlan="private" currentPlan={userPlan} />
+                      </p>
+                    </div>
+                    <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                      usingProphet && !isWarm ? 'text-violet-400 border-violet-400/30 bg-violet-400/10'
+                      : usingProphet && isWarm ? '' : 'text-white/20 border-white/10 bg-transparent'
+                    }`} style={usingProphet && isWarm ? { color: pc.accent, borderColor: `${pc.accent}40`, backgroundColor: `${pc.accent}15` } : undefined}>
+                      {prophetLoading ? '⟳ calculando...' : source}
+                    </span>
+                  </div>
+                  {prophetLoading ? (
+                    <div className="flex items-center gap-2 px-3 py-3 rounded-xl bg-white/5 border border-white/10">
+                      <div className="w-3 h-3 rounded-full border-2 border-violet-400/30 border-t-violet-400 animate-spin" />
+                      <p className="text-[10px] text-white/40">Prophet calculando projeções...</p>
+                    </div>
+                  ) : items.map((item, i) => {
+                    const accent = slotAccents[i] || slotAccents[4];
+                    const dot    = statusDot[item.level] || statusDot.neutral;
+                    const tip    = slotTips[i] || '';
+                    return (
+                      <div key={i} className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl border"
+                        style={{ background: accent.bg, borderColor: accent.border }}>
+                        <div className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: dot }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: accent.color }}>{item.label}</span>
+                            <span className="text-[8px] text-white/20">{item.horizon}</span>
+                          </div>
+                          <p className="text-[10px] text-white/70 leading-snug">{item.text}</p>
+                        </div>
+                        <div className="relative group/ptip shrink-0 mt-0.5">
+                          <Info size={10} className="transition-colors cursor-help" style={{ color: `${accent.color}60` }}
+                            onMouseEnter={e => e.currentTarget.style.color = accent.color}
+                            onMouseLeave={e => e.currentTarget.style.color = `${accent.color}60`}
+                          />
+                          <div className="pointer-events-none absolute bottom-full right-0 mb-2 z-50 w-64 opacity-0 group-hover/ptip:opacity-100 transition-opacity duration-200">
+                            <div className="rounded-xl px-3 py-2.5 shadow-xl" style={{ background: '#1e2433', border: '1px solid rgba(255,255,255,0.12)' }}>
+                              <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: accent.color }}>{item.label}</p>
+                              <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.85)' }}>{tip}</p>
+                            </div>
+                            <div className="w-2 h-2 rotate-45 ml-auto mr-1 -mt-1" style={{ background: '#1e2433', borderBottom: '1px solid rgba(255,255,255,0.12)', borderRight: '1px solid rgba(255,255,255,0.12)' }} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })() : (
+              <FeatureGate canAccess={false} requiredPlan="private" label="Projeções Preditivas — Prophet · Monte Carlo · HHI" />
+            )}
+          </motion.div>
+        )}
+
         {comparativeData && (
           <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <div className="flex items-center gap-2 mb-4">
