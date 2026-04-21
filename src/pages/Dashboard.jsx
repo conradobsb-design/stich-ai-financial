@@ -1389,8 +1389,8 @@ function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, u
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     placeholder="Pergunte sobre seus dados financeiros..."
-                    className="flex-1 bg-transparent text-white placeholder-on-surface-variant/50 text-sm outline-none"
-                    style={{ WebkitTextFillColor: '#ffffff', caretColor: '#ffffff' }}
+                    className="flex-1 bg-transparent placeholder-on-surface-variant/50 text-sm outline-none"
+                    style={{ color: theme === 'light' ? '#1e293b' : '#f8fafc', caretColor: theme === 'light' ? '#1e293b' : '#f8fafc' }}
                     disabled={loading}
                   />
                   <button
