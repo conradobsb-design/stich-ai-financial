@@ -3340,72 +3340,6 @@ export default function Dashboard({ user }) {
               />
             </div>
 
-            {/* Divider */}
-            <div className="w-full h-[1px] bg-white/10 my-3"></div>
-
-            {/* Resumo */}
-            <div className="mt-2">
-              <h3 className="text-xs font-black flex items-center gap-2 mb-4 uppercase tracking-[0.2em]" style={{ color: PLAN_THEMES.family_office.color }}>
-                <Sparkles size={14} /> Resumo
-                <PlanBadge requiredPlan="family_office" currentPlan={userPlan} />
-              </h3>
-              <div className="space-y-3">
-                {(() => {
-                  const items = [];
-                  const { income, expense } = aggregates;
-
-                  // 1. Este mês
-                  const topCat = topCategories[0]?.[0];
-                  const topCatPct = income > 0 && topCategories[0]?.[1]
-                    ? ((topCategories[0][1] / income) * 100).toFixed(0)
-                    : null;
-                  if (expense > income && income > 0) {
-                    items.push({ icon: AlertTriangle, level: 'error',
-                      text: `Este mês: gastos superaram a renda em R$ ${(expense - income).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}. Principal categoria: ${topCat || '—'}.` });
-                  } else if (income > 0) {
-                    items.push({ icon: Shield, level: 'success',
-                      text: `Este mês: ${((expense / income) * 100).toFixed(0)}% da renda comprometida. ${topCat ? `Maior gasto: ${topCat}${topCatPct ? ` (${topCatPct}% da renda)` : ''}.` : ''}` });
-                  }
-
-                  // 2. Trimestre
-                  if (comparativeData?.quarter) {
-                    const { changes, curr } = comparativeData.quarter;
-                    const expDelta = changes.expense;
-                    const trend = expDelta > 5 ? 'subiram' : expDelta < -5 ? 'caíram' : 'estáveis';
-                    const trendLevel = expDelta > 10 ? 'error' : expDelta > 5 ? 'warning' : 'success';
-                    items.push({ icon: TrendingUp, level: trendLevel,
-                      text: `Trimestre: despesas ${trend} ${Math.abs(expDelta).toFixed(0)}% vs trimestre anterior. Saldo acumulado: R$ ${curr.balance.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}.` });
-                  }
-
-                  // 3. Ano
-                  if (comparativeData?.year) {
-                    const { changes, curr } = comparativeData.year;
-                    const savingsRate = curr.income > 0 ? ((curr.savingsOut / curr.income) * 100).toFixed(1) : '0';
-                    const yoyExp = changes.expense;
-                    items.push({ icon: Activity, level: yoyExp > changes.income ? 'warning' : 'primary',
-                      text: `Ano: gastos ${yoyExp > 0 ? '+' : ''}${yoyExp.toFixed(0)}% vs ano anterior${changes.income !== 0 ? `, renda ${changes.income > 0 ? '+' : ''}${changes.income.toFixed(0)}%` : ''}. Taxa de poupança: ${savingsRate}% da renda.` });
-                  }
-
-                  return items.map((ins, i) => {
-                    const Icon = ins.icon;
-                    const colorMap = {
-                      success: 'border-l-success bg-success/5 text-success',
-                      error:   'border-l-error bg-error/5 text-error',
-                      warning: 'border-l-yellow-500 bg-yellow-500/5 text-yellow-400',
-                      primary: 'border-l-primary bg-primary/5 text-primary',
-                    };
-                    const cls = colorMap[ins.level] || colorMap.primary;
-                    return (
-                      <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                        className={`flex items-center gap-3 p-3.5 rounded-2xl border-l-[3px] bg-white/[0.03] transition-all hover:bg-white/[0.05] shadow-sm ${cls}`}>
-                        <div className={`p-1.5 rounded-lg opacity-80 ${cls}`}><Icon size={14} /></div>
-                        <p className="text-[11px] font-bold leading-snug text-white/90">{ins.text}</p>
-                      </motion.div>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
           </motion.div>
 
         </motion.div>
@@ -3548,6 +3482,68 @@ export default function Dashboard({ user }) {
             )}
           </motion.div>
         )}
+
+        {/* ── Resumo ── */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
+          className="glass-card rounded-[2rem] p-4 sm:p-6">
+          <h3 className="text-xs font-black flex items-center gap-2 mb-4 uppercase tracking-[0.2em]"
+            style={{ color: PLAN_THEMES.family_office.color }}>
+            <Sparkles size={14} /> Resumo
+            <PlanBadge requiredPlan="family_office" currentPlan={userPlan} />
+          </h3>
+          <div className="space-y-3">
+            {(() => {
+              const items = [];
+              const { income, expense } = aggregates;
+              const topCat = topCategories[0]?.[0];
+              const topCatPct = income > 0 && topCategories[0]?.[1]
+                ? ((topCategories[0][1] / income) * 100).toFixed(0) : null;
+              if (expense > income && income > 0) {
+                items.push({ icon: AlertTriangle, level: 'error',
+                  text: `Este mês: gastos superaram a renda em R$ ${(expense - income).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}. Principal categoria: ${topCat || '—'}.` });
+              } else if (income > 0) {
+                items.push({ icon: Shield, level: 'success',
+                  text: `Este mês: ${((expense / income) * 100).toFixed(0)}% da renda comprometida. ${topCat ? `Maior gasto: ${topCat}${topCatPct ? ` (${topCatPct}% da renda)` : ''}.` : ''}` });
+              }
+              if (comparativeData?.quarter) {
+                const { changes, curr } = comparativeData.quarter;
+                const expDelta = changes.expense;
+                const trend = expDelta > 5 ? 'subiram' : expDelta < -5 ? 'caíram' : 'estáveis';
+                const trendLevel = expDelta > 10 ? 'error' : expDelta > 5 ? 'warning' : 'success';
+                items.push({ icon: TrendingUp, level: trendLevel,
+                  text: `Trimestre: despesas ${trend} ${Math.abs(expDelta).toFixed(0)}% vs trimestre anterior. Saldo acumulado: R$ ${curr.balance.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}.` });
+              }
+              if (comparativeData?.year) {
+                const { changes, curr } = comparativeData.year;
+                const savingsRate = curr.income > 0 ? ((curr.savingsOut / curr.income) * 100).toFixed(1) : '0';
+                const yoyExp = changes.expense;
+                items.push({ icon: Activity, level: yoyExp > changes.income ? 'warning' : 'primary',
+                  text: `Ano: gastos ${yoyExp > 0 ? '+' : ''}${yoyExp.toFixed(0)}% vs ano anterior${changes.income !== 0 ? `, renda ${changes.income > 0 ? '+' : ''}${changes.income.toFixed(0)}%` : ''}. Taxa de poupança: ${savingsRate}% da renda.` });
+              }
+              if (!items.length) return (
+                <p className="text-[11px] text-white/30 text-center py-4">Importe dados de pelo menos 2 meses para ver o resumo.</p>
+              );
+              return items.map((ins, i) => {
+                const Icon = ins.icon;
+                const colorMap = {
+                  success: 'border-l-success bg-success/5 text-success',
+                  error:   'border-l-error bg-error/5 text-error',
+                  warning: 'border-l-yellow-500 bg-yellow-500/5 text-yellow-400',
+                  primary: 'border-l-primary bg-primary/5 text-primary',
+                };
+                const cls = colorMap[ins.level] || colorMap.primary;
+                return (
+                  <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className={`flex items-center gap-3 p-3.5 rounded-2xl border-l-[3px] bg-white/[0.03] transition-all hover:bg-white/[0.05] shadow-sm ${cls}`}>
+                    <div className={`p-1.5 rounded-lg opacity-80 ${cls}`}><Icon size={14} /></div>
+                    <p className="text-[11px] font-bold leading-snug text-white/90">{ins.text}</p>
+                  </motion.div>
+                );
+              });
+            })()}
+          </div>
+        </motion.div>
 
         {comparativeData && (
           <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
