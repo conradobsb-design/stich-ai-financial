@@ -1239,7 +1239,7 @@ function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, u
     if (open && messages.length === 0) {
       setMessages([{
         role: 'assistant',
-        text: `Olá! Sou o assistente financeiro do Extrato Co. 👋\n\nAnalisei os seus dados de **${selectedMonth || 'este mês'}** e estou pronto para ajudar. O que você gostaria de saber?`,
+        text: `Olá! Sou a **Clara**, sua consultora financeira pessoal no Extrato Co. 👋\n\nJá analisei seus dados de **${selectedMonth || 'este mês'}**. Me diz: o que você quer entender melhor sobre suas finanças hoje?`,
       }]);
     }
     if (open) setTimeout(() => inputRef.current?.focus(), 300);
@@ -1317,8 +1317,8 @@ function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, u
                     <Bot size={18} className="text-secondary" />
                   </div>
                   <div>
-                    <p className="text-white font-bold text-sm">Assistente Financeiro</p>
-                    <p className="text-on-surface-variant text-[11px]">Análise inteligente do seu extrato</p>
+                    <p className="text-white font-bold text-sm">Clara</p>
+                    <p className="text-on-surface-variant text-[11px]">Sua consultora financeira pessoal</p>
                   </div>
                 </div>
                 <button
