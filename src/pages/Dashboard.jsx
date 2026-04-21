@@ -19,7 +19,8 @@ import {
   CheckCircle, Archive, Clock,
   Home, LayoutList, BarChart2, User, Bell, Settings, Lock, HelpCircle,
   Crown, Star, TrendingUp as TrendUpIcon, BrainCircuit,
-  Target, Flame, Trophy, Award, Gem
+  Target, Flame, Trophy, Award, Gem,
+  Medal, ChevronUp, ArchiveX
 } from 'lucide-react';
 import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 import { useSEO } from '../hooks/useSEO';
@@ -626,15 +627,17 @@ const useStreak = () => {
 // ── Hook de Metas — Supabase ──
 const useGoals = (userId) => {
   const [goals, setGoals] = React.useState([]);
+  const [archivedGoals, setArchivedGoals] = React.useState([]);
 
   const fetchGoals = React.useCallback(async () => {
     if (!userId) return;
     const { data } = await supabase.schema('stich_ai').from('goals')
-      .select('*')
-      .eq('user_id', userId)
-      .in('status', ['active', 'done'])
+      .select('*').eq('user_id', userId)
       .order('created_at', { ascending: true });
-    if (data) setGoals(data);
+    if (data) {
+      setGoals(data.filter(g => g.status === 'active' || g.status === 'done'));
+      setArchivedGoals(data.filter(g => g.status === 'archived'));
+    }
   }, [userId]);
 
   React.useEffect(() => { fetchGoals(); }, [fetchGoals]);
@@ -644,10 +647,7 @@ const useGoals = (userId) => {
     const { data, error } = await supabase.schema('stich_ai').from('goals')
       .insert({ ...goal, user_id: userId, status: 'active' })
       .select().single();
-    if (error) {
-      console.error('addGoal error:', error);
-      return { success: false, error: error.message };
-    }
+    if (error) { console.error('addGoal error:', error); return { success: false, error: error.message }; }
     if (data) setGoals(prev => [...prev, data]);
     return { success: true };
   };
@@ -659,7 +659,316 @@ const useGoals = (userId) => {
     setGoals(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g));
   };
 
-  return { goals, addGoal, updateGoalProgress, refetch: fetchGoals };
+  const archiveGoal = async (id) => {
+    await supabase.schema('stich_ai').from('goals').update({ status: 'archived' }).eq('id', id);
+    setGoals(prev => {
+      const goal = prev.find(g => g.id === id);
+      if (goal) setArchivedGoals(a => [...a, { ...goal, status: 'archived' }]);
+      return prev.filter(g => g.id !== id);
+    });
+  };
+
+  const unarchiveGoal = async (id) => {
+    await supabase.schema('stich_ai').from('goals').update({ status: 'active' }).eq('id', id);
+    setArchivedGoals(prev => {
+      const goal = prev.find(g => g.id === id);
+      if (goal) setGoals(a => [...a, { ...goal, status: 'active' }]);
+      return prev.filter(g => g.id !== id);
+    });
+  };
+
+  return { goals, archivedGoals, addGoal, updateGoalProgress, archiveGoal, unarchiveGoal, refetch: fetchGoals };
+};
+
+// ── Ranking score calc ──
+const calcRankingScore = ({ income, expense, savingsOut, goals, streak }) => {
+  if (!income || income <= 0) return { total: 0, breakdown: { savings: 0, control: 0, missions: 0, streak: 0, activity: 0 } };
+  const savingsPts  = Math.min(400, Math.round((savingsOut / income) * 600));
+  const expRatio    = expense / income;
+  const controlPts  = Math.max(0, Math.round(200 * (1 - Math.max(0, expRatio - 0.3) / 0.7)));
+  const doneGoals   = goals.filter(g => g.status === 'done').length;
+  const missionPts  = goals.length > 0 ? Math.round((doneGoals / goals.length) * 200) : 0;
+  const streakPts   = Math.min(100, Math.round((streak / 14) * 100));
+  const activityPts = 100;
+  const total = savingsPts + controlPts + missionPts + streakPts + activityPts;
+  return { total, breakdown: { savings: savingsPts, control: controlPts, missions: missionPts, streak: streakPts, activity: activityPts } };
+};
+
+// ── useRanking hook ──
+const useRanking = (userId) => {
+  const [profile, setProfile]   = React.useState(null);
+  const [leaderboard, setLeaderboard] = React.useState([]);
+  const [loading, setLoading]   = React.useState(true);
+
+  const fetchProfile = React.useCallback(async () => {
+    if (!userId) return setLoading(false);
+    const { data } = await supabase.schema('stich_ai').from('ranking_profiles')
+      .select('*').eq('user_id', userId).maybeSingle();
+    setProfile(data || null);
+    setLoading(false);
+  }, [userId]);
+
+  React.useEffect(() => { fetchProfile(); }, [fetchProfile]);
+
+  const optIn = async (display_name, avatar_emoji) => {
+    if (!userId) return { success: false };
+    const { data, error } = await supabase.schema('stich_ai').from('ranking_profiles')
+      .upsert({ user_id: userId, display_name, avatar_emoji, opted_in: true }, { onConflict: 'user_id' })
+      .select().single();
+    if (error) return { success: false, error: error.message };
+    setProfile(data);
+    return { success: true };
+  };
+
+  const optOut = async () => {
+    if (!userId) return;
+    await supabase.schema('stich_ai').from('ranking_profiles')
+      .update({ opted_in: false }).eq('user_id', userId);
+    setProfile(null);
+  };
+
+  const upsertScore = async (period, score, breakdown) => {
+    if (!userId || !profile?.opted_in) return;
+    await supabase.schema('stich_ai').from('ranking_scores')
+      .upsert({ user_id: userId, period, score, breakdown, updated_at: new Date().toISOString() }, { onConflict: 'user_id,period' });
+  };
+
+  const fetchLeaderboard = React.useCallback(async (periods) => {
+    if (!Array.isArray(periods)) periods = [periods];
+    const { data: scoreData } = await supabase.schema('stich_ai').from('ranking_scores')
+      .select('user_id, score, period').in('period', periods)
+      .order('score', { ascending: false }).limit(50);
+    if (!scoreData?.length) return setLeaderboard([]);
+
+    // Aggregate multi-period scores per user
+    const totals = {};
+    scoreData.forEach(s => {
+      if (!totals[s.user_id]) totals[s.user_id] = 0;
+      totals[s.user_id] += s.score;
+    });
+
+    const userIds = Object.keys(totals);
+    const { data: profileData } = await supabase.schema('stich_ai').from('ranking_profiles')
+      .select('user_id, display_name, avatar_emoji').in('user_id', userIds).eq('opted_in', true);
+    const profileMap = {};
+    profileData?.forEach(p => { profileMap[p.user_id] = p; });
+
+    const merged = userIds
+      .filter(uid => profileMap[uid])
+      .map(uid => ({ user_id: uid, score: totals[uid], ...profileMap[uid] }))
+      .sort((a, b) => b.score - a.score)
+      .map((entry, i) => ({ ...entry, rank: i + 1 }));
+    setLeaderboard(merged);
+  }, []);
+
+  return { profile, leaderboard, loading, optIn, optOut, upsertScore, fetchLeaderboard };
+};
+
+// ── RankingOptInModal ──
+const RankingOptInModal = ({ onClose, onOptIn, isWarm = false }) => {
+  const [displayName, setDisplayName] = React.useState('');
+  const [selectedEmoji, setSelectedEmoji] = React.useState('🐯');
+  const [saving, setSaving] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  const { theme } = useApp();
+  const isLight = theme === 'light';
+  const AVATARS = ['🐯','🦁','🦊','🐺','🦅','🐉','🌟','🔥','💎','🚀','🎯','⚡'];
+  const textMain  = isLight ? (isWarm ? '#3d2008' : '#0f172a') : '#ffffff';
+  const textMuted = isLight ? (isWarm ? '#7c4a2d' : '#64748b') : 'rgba(255,255,255,0.55)';
+  const inputBg   = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.07)';
+  const inputBdr  = isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)';
+  const accent    = isWarm ? '#e8a020' : '#0ea5e9';
+  const modalBg   = isLight ? (isWarm ? '#faf5ec' : '#ffffff') : '#0f172a';
+  const modalBdr  = isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)';
+
+  const handleSave = async () => {
+    if (!displayName.trim() || displayName.trim().length < 2) { setErr('Nome deve ter pelo menos 2 caracteres'); return; }
+    setSaving(true);
+    const res = await onOptIn(displayName.trim(), selectedEmoji);
+    setSaving(false);
+    if (res?.success) onClose();
+    else setErr(res?.error || 'Erro ao salvar. Tente novamente.');
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
+      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-sm rounded-[2rem] p-6 flex flex-col gap-5"
+        style={{ background: modalBg, border: `1px solid ${modalBdr}` }}>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="font-black text-lg" style={{ color: textMain }}>Entrar no Ranking</h2>
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: textMuted }}>
+              Seu nome e pontuação ficam visíveis para outros.<br/>Seus dados financeiros permanecem privados.
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:opacity-60 transition-opacity">
+            <X size={16} style={{ color: textMuted }} />
+          </button>
+        </div>
+        <div>
+          <p className="text-[11px] font-bold mb-2" style={{ color: textMuted }}>Escolha seu avatar</p>
+          <div className="grid grid-cols-6 gap-2">
+            {AVATARS.map(emoji => (
+              <button key={emoji} onClick={() => setSelectedEmoji(emoji)}
+                className="aspect-square rounded-xl text-xl flex items-center justify-center transition-all"
+                style={{ background: selectedEmoji === emoji ? `${accent}20` : inputBg,
+                         border: `1.5px solid ${selectedEmoji === emoji ? accent : 'transparent'}`,
+                         transform: selectedEmoji === emoji ? 'scale(1.1)' : 'scale(1)' }}>
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="text-[11px] font-bold mb-2" style={{ color: textMuted }}>Nome de exibição (apelido)</p>
+          <input value={displayName} onChange={e => { setDisplayName(e.target.value.slice(0, 20)); setErr(''); }}
+            placeholder="Ex: Poupador Ninja" maxLength={20}
+            className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+            style={{ background: inputBg, border: `1px solid ${inputBdr}`, color: textMain }} />
+          {err && <p className="text-[10px] mt-1.5" style={{ color: '#ef4444' }}>{err}</p>}
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold"
+            style={{ background: inputBg, color: textMuted }}>
+            Cancelar
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            className="flex-1 py-3 rounded-xl text-sm font-black transition-opacity"
+            style={{ background: accent, color: '#ffffff', opacity: saving ? 0.6 : 1 }}>
+            {saving ? 'Salvando...' : 'Entrar no ranking'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+// ── LeaderboardPanel ──
+const PERIOD_LABELS = { month: 'Mês', quarter: 'Trimestre', year: 'Ano' };
+const PODIUM_COLORS = ['#f59e0b', '#94a3b8', '#b45309'];
+const PODIUM_LABELS = ['🥇', '🥈', '🥉'];
+
+const LeaderboardPanel = ({ leaderboard, currentUserId, period, onPeriodChange, onOptIn, isParticipating, isWarm = false }) => {
+  const { theme } = useApp();
+  const isLight = theme === 'light';
+  const accent    = isWarm ? '#e8a020' : '#0ea5e9';
+  const textMain  = isLight ? (isWarm ? '#3d2008' : '#0f172a') : '#ffffff';
+  const textMuted = isLight ? (isWarm ? '#7c4a2d' : '#64748b') : 'rgba(255,255,255,0.50)';
+  const rowBg     = isLight ? (isWarm ? 'rgba(124,74,45,0.05)' : 'rgba(14,165,233,0.04)') : 'rgba(255,255,255,0.04)';
+  const rowBgMe   = isLight ? (isWarm ? 'rgba(232,160,32,0.12)' : 'rgba(14,165,233,0.10)') : 'rgba(14,165,233,0.12)';
+  const rowBdrMe  = `${accent}40`;
+  const podiumBg  = isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)';
+
+  const top3   = leaderboard.slice(0, 3);
+  const rest   = leaderboard.slice(3);
+  const myEntry = leaderboard.find(e => e.user_id === currentUserId);
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Period toggle */}
+      <div className="flex gap-1.5 p-1 rounded-2xl self-start" style={{ background: podiumBg }}>
+        {Object.entries(PERIOD_LABELS).map(([key, label]) => (
+          <button key={key} onClick={() => onPeriodChange(key)}
+            className="px-4 py-1.5 rounded-xl text-xs font-bold transition-all"
+            style={{ background: period === key ? accent : 'transparent',
+                     color: period === key ? '#ffffff' : textMuted }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Podium top 3 */}
+      {top3.length > 0 && (
+        <div className="grid grid-cols-3 gap-2">
+          {[top3[1], top3[0], top3[2]].map((entry, displayIdx) => {
+            if (!entry) return <div key={displayIdx} />;
+            const rank = entry.rank;
+            const color = PODIUM_COLORS[rank - 1];
+            const heights = ['h-20', 'h-28', 'h-16'];
+            const isMe = entry.user_id === currentUserId;
+            return (
+              <motion.div key={entry.user_id}
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: displayIdx * 0.07 }}
+                className={`flex flex-col items-center justify-end gap-1 rounded-2xl p-3 ${heights[displayIdx]}`}
+                style={{ background: `${color}12`, border: `1px solid ${color}30`,
+                         outline: isMe ? `2px solid ${accent}` : 'none' }}>
+                <div className="text-xl leading-none">{entry.avatar_emoji}</div>
+                <p className="text-[9px] font-black text-center leading-tight truncate w-full text-center"
+                  style={{ color: isMe ? accent : textMain }}>
+                  {entry.display_name}
+                </p>
+                <p className="text-[10px] font-black tabular-nums" style={{ color }}>{entry.score.toLocaleString()}</p>
+                <span className="text-base leading-none">{PODIUM_LABELS[rank - 1]}</span>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Rest of leaderboard */}
+      {rest.length > 0 && (
+        <div className="flex flex-col gap-1">
+          {rest.map((entry, i) => {
+            const isMe = entry.user_id === currentUserId;
+            return (
+              <motion.div key={entry.user_id}
+                initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.03 }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-2xl"
+                style={{ background: isMe ? rowBgMe : rowBg,
+                         border: `1px solid ${isMe ? rowBdrMe : 'transparent'}` }}>
+                <span className="text-[11px] font-black w-5 tabular-nums text-right shrink-0"
+                  style={{ color: textMuted }}>#{entry.rank}</span>
+                <span className="text-base shrink-0">{entry.avatar_emoji}</span>
+                <span className="text-xs font-semibold flex-1 truncate"
+                  style={{ color: isMe ? accent : textMain }}>{entry.display_name}</span>
+                <span className="text-xs font-black tabular-nums" style={{ color: textMuted }}>
+                  {entry.score.toLocaleString()}
+                </span>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* My rank if outside top list */}
+      {myEntry && myEntry.rank > leaderboard.length && (
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl"
+          style={{ background: rowBgMe, border: `1px solid ${rowBdrMe}` }}>
+          <span className="text-[11px] font-black w-5 tabular-nums text-right shrink-0"
+            style={{ color: accent }}>#{myEntry.rank}</span>
+          <span className="text-base shrink-0">{myEntry.avatar_emoji}</span>
+          <span className="text-xs font-semibold flex-1 truncate" style={{ color: accent }}>
+            {myEntry.display_name} (você)
+          </span>
+          <span className="text-xs font-black tabular-nums" style={{ color: textMuted }}>
+            {myEntry.score.toLocaleString()}
+          </span>
+        </div>
+      )}
+
+      {/* Empty + CTA */}
+      {leaderboard.length === 0 && (
+        <div className="flex flex-col items-center gap-2 py-6">
+          <Trophy size={28} style={{ color: textMuted }} />
+          <p className="text-xs text-center" style={{ color: textMuted }}>
+            Nenhum participante ainda.<br/>Seja o primeiro no ranking!
+          </p>
+        </div>
+      )}
+
+      {!isParticipating && (
+        <button onClick={onOptIn}
+          className="w-full py-3 rounded-2xl text-sm font-black transition-all active:scale-[0.98]"
+          style={{ background: `${accent}20`, color: accent, border: `1px solid ${accent}40` }}>
+          Participar do ranking
+        </button>
+      )}
+    </div>
+  );
 };
 
 // ── Modal para criar/editar metas ──
@@ -1205,13 +1514,18 @@ export default function Dashboard({ user }) {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const [editModal, setEditModal] = useState(null); // transaction item being edited
+  const [editModal, setEditModal] = useState(null);
   const [showGoalModal, setShowGoalModal] = useState(false);
-  const { goals, addGoal, updateGoalProgress } = useGoals(effectiveUserId);
+  const [showArchivedGoals, setShowArchivedGoals] = useState(false);
+  const { goals, archivedGoals, addGoal, updateGoalProgress, archiveGoal, unarchiveGoal } = useGoals(effectiveUserId);
   const { unlocked: unlockedBadges, newBadge, checkAndUnlock } = useBadges();
   const [showAllBadges, setShowAllBadges] = useState(false);
   const [streakTooltipRect, setStreakTooltipRect] = useState(null);
   const streakRef = useRef(null);
+  const [showRankingOptIn, setShowRankingOptIn] = useState(false);
+  const [rankingPeriod, setRankingPeriod] = useState('month');
+  const [showFullRanking, setShowFullRanking] = useState(false);
+  const { profile: rankingProfile, leaderboard, loading: rankingLoading, optIn: rankingOptIn, upsertScore, fetchLeaderboard } = useRanking(effectiveUserId);
 
   const isOwner = effectiveUserId === user?.id;
 
@@ -1821,6 +2135,37 @@ export default function Dashboard({ user }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.length, aggregates, streak, goals]);
 
+  // Auto-upsert ranking score when data changes
+  useEffect(() => {
+    if (!aggregates.income || !rankingProfile?.opted_in) return;
+    const { total, breakdown } = calcRankingScore({
+      income: aggregates.income, expense: aggregates.expense,
+      savingsOut: aggregates.savingsOut, goals, streak,
+    });
+    upsertScore(selectedMonth, total, breakdown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aggregates, goals, streak, rankingProfile, selectedMonth]);
+
+  // Load leaderboard when period changes
+  useEffect(() => {
+    const { year, month } = (() => {
+      const [y, m] = selectedMonth.split('-').map(Number);
+      return { year: y, month: m };
+    })();
+    let periods = [selectedMonth];
+    if (rankingPeriod === 'quarter') {
+      const q = Math.ceil(month / 3);
+      periods = [0,1,2].map(i => {
+        const m2 = (q - 1) * 3 + 1 + i;
+        return `${year}-${String(m2).padStart(2, '0')}`;
+      });
+    } else if (rankingPeriod === 'year') {
+      periods = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
+    }
+    fetchLeaderboard(periods);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rankingPeriod, selectedMonth, rankingProfile]);
+
   const chartData = useMemo(() => {
     const agg = {};
     monthlyData.forEach(item => {
@@ -2328,70 +2673,124 @@ export default function Dashboard({ user }) {
           );
         })()}
 
-        {/* ── Metas ── */}
-        {goals.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-            className="glass-card rounded-[1.75rem] p-4 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-black text-sm text-white">Missões</h3>
-              <button onClick={() => setShowGoalModal(true)}
-                className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full transition-all active:scale-95"
-                style={{ background: `${isWarm ? '#e8a020' : '#0ea5e9'}18`, color: isWarm ? '#e8a020' : '#0ea5e9', border: `1px solid ${isWarm ? '#e8a020' : '#0ea5e9'}30` }}>
-                <Plus size={12} /> Missão
-              </button>
-            </div>
-            {goals.filter(g => g.status === 'active' || g.status === 'done').map(goal => {
-              const pct = goal.target_amount > 0 ? Math.min(100, Math.round((goal.current_amount / goal.target_amount) * 100)) : 0;
-              const barColor = goal.status === 'done'
-                ? (isWarm ? '#e8a020' : '#10b981')
-                : pct >= 80 ? (isWarm ? '#c49a4a' : '#22d3ee')
-                : pct >= 50 ? (isWarm ? '#b8730a' : '#0ea5e9')
-                : (isWarm ? '#7c4a2d' : '#6366f1');
-              return (
-                <div key={goal.id} className="flex items-center gap-3">
-                  <span className="text-xl shrink-0">{goal.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-white truncate max-w-[60%]">{goal.title}</span>
-                      <span className="text-[10px] font-bold shrink-0 ml-1" style={{ color: barColor }}>
-                        {goal.status === 'done' ? '✓ Concluída' : `${pct}%`}
-                      </span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-                      <motion.div className="h-full rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.8, ease: 'easeOut' }}
-                        style={{ background: barColor }} />
-                    </div>
-                    <div className="flex justify-between mt-0.5">
-                      <span className="text-[9px] text-white/30">{maskBRL(goal.current_amount)}</span>
-                      <span className="text-[9px] text-white/30">meta {maskBRL(goal.target_amount)}</span>
+        {/* ── Missões ── */}
+        {(() => {
+          const { theme: _tm } = useApp();
+          const isLM = _tm === 'light';
+          const acc = isWarm ? '#e8a020' : '#0ea5e9';
+          const tMain = isLM ? (isWarm ? '#3d2008' : '#0f172a') : '#ffffff';
+          const tMuted = isLM ? (isWarm ? '#7c4a2d' : '#64748b') : 'rgba(255,255,255,0.45)';
+          const barTrack = isLM ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.10)';
+          const archBg = isLM ? (isWarm ? 'rgba(124,74,45,0.06)' : 'rgba(0,0,0,0.04)') : 'rgba(255,255,255,0.03)';
+          const archBdr = isLM ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)';
+
+          if (goals.length === 0 && archivedGoals.length === 0) return (
+            <motion.button
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+              onClick={() => setShowGoalModal(true)}
+              className="glass-card rounded-[1.75rem] p-4 flex items-center gap-3 w-full text-left transition-all hover:opacity-80 active:scale-[0.98]">
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                style={{ background: `${acc}15` }}>
+                <span className="text-xl">🎯</span>
+              </div>
+              <div>
+                <p className="text-sm font-bold" style={{ color: tMain }}>Crie sua primeira missão</p>
+                <p className="text-[11px]" style={{ color: tMuted }}>Defina objetivos e acompanhe em tempo real</p>
+              </div>
+              <Plus size={16} className="ml-auto shrink-0" style={{ color: tMuted }} />
+            </motion.button>
+          );
+
+          return (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+              className="glass-card rounded-[1.75rem] p-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-black text-sm" style={{ color: tMain }}>Missões</h3>
+                <button onClick={() => setShowGoalModal(true)}
+                  className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full transition-all active:scale-95"
+                  style={{ background: `${acc}18`, color: acc, border: `1px solid ${acc}30` }}>
+                  <Plus size={12} /> Missão
+                </button>
+              </div>
+
+              {/* Active & done goals */}
+              {goals.map(goal => {
+                const pct = goal.target_amount > 0 ? Math.min(100, Math.round((goal.current_amount / goal.target_amount) * 100)) : 0;
+                const barColor = goal.status === 'done'
+                  ? (isWarm ? '#e8a020' : '#10b981')
+                  : pct >= 80 ? (isWarm ? '#c49a4a' : '#22d3ee')
+                  : pct >= 50 ? (isWarm ? '#b8730a' : '#0ea5e9')
+                  : (isWarm ? '#7c4a2d' : '#6366f1');
+                return (
+                  <div key={goal.id} className="flex items-center gap-3 group">
+                    <span className="text-xl shrink-0">{goal.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold truncate max-w-[60%]" style={{ color: tMain }}>{goal.title}</span>
+                        <div className="flex items-center gap-2 shrink-0 ml-1">
+                          <span className="text-[10px] font-bold" style={{ color: barColor }}>
+                            {goal.status === 'done' ? '✓ Concluída' : `${pct}%`}
+                          </span>
+                          {goal.status === 'done' && (
+                            <button onClick={() => archiveGoal(goal.id)}
+                              title="Arquivar missão"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md hover:opacity-80"
+                              style={{ color: tMuted }}>
+                              <Archive size={11} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: barTrack }}>
+                        <motion.div className="h-full rounded-full"
+                          initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                          transition={{ duration: 0.8, ease: 'easeOut' }}
+                          style={{ background: barColor }} />
+                      </div>
+                      <div className="flex justify-between mt-0.5">
+                        <span className="text-[9px]" style={{ color: tMuted }}>{maskBRL(goal.current_amount)}</span>
+                        <span className="text-[9px]" style={{ color: tMuted }}>meta {maskBRL(goal.target_amount)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </motion.div>
-        )}
+                );
+              })}
 
-        {/* Botão adicionar meta quando não há metas */}
-        {goals.length === 0 && (
-          <motion.button
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-            onClick={() => setShowGoalModal(true)}
-            className="glass-card rounded-[1.75rem] p-4 flex items-center gap-3 w-full text-left transition-all hover:opacity-80 active:scale-[0.98]">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-              style={{ background: `${isWarm ? '#e8a020' : '#0ea5e9'}15` }}>
-              <span className="text-xl">🎯</span>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-white">Crie sua primeira missão</p>
-              <p className="text-[11px] text-white/40">Defina objetivos e acompanhe em tempo real</p>
-            </div>
-            <Plus size={16} className="ml-auto shrink-0 text-white/40" />
-          </motion.button>
-        )}
+              {/* Archived section */}
+              {archivedGoals.length > 0 && (
+                <div>
+                  <button onClick={() => setShowArchivedGoals(v => !v)}
+                    className="flex items-center gap-1.5 text-[10px] font-bold transition-opacity hover:opacity-70 mt-1"
+                    style={{ color: tMuted }}>
+                    {showArchivedGoals ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                    {archivedGoals.length} missão{archivedGoals.length !== 1 ? 's' : ''} arquivada{archivedGoals.length !== 1 ? 's' : ''}
+                  </button>
+                  <AnimatePresence>
+                    {showArchivedGoals && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
+                        className="overflow-hidden mt-2 flex flex-col gap-2">
+                        {archivedGoals.map(goal => (
+                          <div key={goal.id} className="flex items-center gap-3 px-3 py-2 rounded-2xl"
+                            style={{ background: archBg, border: `1px solid ${archBdr}` }}>
+                            <span className="text-base shrink-0 opacity-40">{goal.emoji}</span>
+                            <span className="text-xs flex-1 truncate" style={{ color: tMuted }}>{goal.title}</span>
+                            <button onClick={() => unarchiveGoal(goal.id)}
+                              title="Restaurar missão"
+                              className="p-1 rounded-lg hover:opacity-70 transition-opacity"
+                              style={{ color: tMuted }}>
+                              <ArchiveX size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </motion.div>
+          );
+        })()}
 
         {/* ── Conquistas ── */}
         {(() => {
@@ -2491,6 +2890,94 @@ export default function Dashboard({ user }) {
                   </div>
                 );
               })()}
+            </motion.div>
+          );
+        })()}
+
+        {/* ── Ranking ── */}
+        {(() => {
+          const { theme: _tr } = useApp();
+          const isLR = _tr === 'light';
+          const acc = isWarm ? '#e8a020' : '#0ea5e9';
+          const tMain = isLR ? (isWarm ? '#3d2008' : '#0f172a') : '#ffffff';
+          const tMuted = isLR ? (isWarm ? '#7c4a2d' : '#64748b') : 'rgba(255,255,255,0.45)';
+          const isParticipating = !!(rankingProfile?.opted_in);
+          const myScore = isParticipating
+            ? (() => { const { total } = calcRankingScore({ income: aggregates.income, expense: aggregates.expense, savingsOut: aggregates.savingsOut, goals, streak }); return total; })()
+            : null;
+
+          return (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+              className="glass-card rounded-[1.75rem] p-4 flex flex-col gap-4">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Trophy size={14} style={{ color: acc }} />
+                  <h3 className="font-black text-sm" style={{ color: tMain }}>Ranking</h3>
+                  {isParticipating && myScore !== null && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: `${acc}20`, color: acc }}>
+                      {myScore.toLocaleString()} pts
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isParticipating && (
+                    <span className="text-[10px]" style={{ color: tMuted }}>
+                      {rankingProfile.avatar_emoji} {rankingProfile.display_name}
+                    </span>
+                  )}
+                  <button onClick={() => setShowFullRanking(v => !v)}
+                    className="text-[10px] font-bold transition-opacity hover:opacity-70"
+                    style={{ color: acc }}>
+                    {showFullRanking ? 'Fechar' : 'Ver ranking'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Teaser: top 3 positions (always visible) */}
+              {!showFullRanking && leaderboard.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {leaderboard.slice(0, 3).map((entry, i) => {
+                    const isMe = entry.user_id === effectiveUserId;
+                    const podiumColor = PODIUM_COLORS[i];
+                    return (
+                      <div key={entry.user_id} className="flex items-center gap-3 px-2 py-1.5 rounded-xl"
+                        style={{ background: isMe ? `${acc}12` : 'transparent' }}>
+                        <span className="text-sm w-5 text-center">{PODIUM_LABELS[i]}</span>
+                        <span className="text-base shrink-0">{entry.avatar_emoji}</span>
+                        <span className="text-xs font-semibold flex-1 truncate"
+                          style={{ color: isMe ? acc : tMain }}>{entry.display_name}</span>
+                        <span className="text-[11px] font-black tabular-nums" style={{ color: podiumColor }}>
+                          {entry.score.toLocaleString()}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Full leaderboard */}
+              {showFullRanking && (
+                <LeaderboardPanel
+                  leaderboard={leaderboard}
+                  currentUserId={effectiveUserId}
+                  period={rankingPeriod}
+                  onPeriodChange={setRankingPeriod}
+                  onOptIn={() => setShowRankingOptIn(true)}
+                  isParticipating={isParticipating}
+                  isWarm={isWarm}
+                />
+              )}
+
+              {/* CTA para não-participantes */}
+              {!isParticipating && !showFullRanking && (
+                <button onClick={() => setShowRankingOptIn(true)}
+                  className="w-full py-2.5 rounded-2xl text-xs font-black transition-all active:scale-[0.98]"
+                  style={{ background: `${acc}15`, color: acc, border: `1px solid ${acc}35` }}>
+                  Participar do ranking mensal
+                </button>
+              )}
             </motion.div>
           );
         })()}
@@ -3850,6 +4337,13 @@ export default function Dashboard({ user }) {
             onClose={() => setShowGoalModal(false)}
             onSave={addGoal}
             userPlan={userPlan}
+          />
+        )}
+        {showRankingOptIn && (
+          <RankingOptInModal
+            onClose={() => setShowRankingOptIn(false)}
+            onOptIn={rankingOptIn}
+            isWarm={isWarm}
           />
         )}
       </AnimatePresence>
