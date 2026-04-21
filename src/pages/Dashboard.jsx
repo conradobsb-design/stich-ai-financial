@@ -1228,7 +1228,7 @@ const SUGGESTED_QUESTIONS = [
   'Compare entradas e saídas',
 ];
 
-function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, userEmail }) {
+function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, userEmail, comparativeData, goals = [], streak = 0 }) {
   const [messages, setMessages] = React.useState([]);
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
@@ -1257,14 +1257,55 @@ function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, u
     setLoading(true);
     try {
       const context = {
+        // Mês selecionado
         month: selectedMonth,
         income: aggregates.income,
         expense: aggregates.expense,
         savings: aggregates.savingsOut,
-        savingsIn: aggregates.savingsIn,
-        savingsNet: aggregates.savingsNet,
+        savings_in: aggregates.savingsIn,
+        savings_net: aggregates.savingsNet,
         balance: aggregates.balance,
         top_categories: topCategories.map(([cat, val]) => ({ category: cat, total: val })),
+        // Comparativo mês anterior
+        vs_last_month: comparativeData?.month ? {
+          income_chg_pct: comparativeData.month.changes.income,
+          expense_chg_pct: comparativeData.month.changes.expense,
+          balance_chg_pct: comparativeData.month.changes.balance,
+          prev_label: comparativeData.month.labels[1],
+          prev_income: comparativeData.month.prev.income,
+          prev_expense: comparativeData.month.prev.expense,
+          prev_balance: comparativeData.month.prev.balance,
+        } : null,
+        // Trimestre atual
+        quarter: comparativeData?.quarter ? {
+          label: comparativeData.quarter.labels[0],
+          income: comparativeData.quarter.curr.income,
+          expense: comparativeData.quarter.curr.expense,
+          balance: comparativeData.quarter.curr.balance,
+          savings: comparativeData.quarter.curr.savingsOut,
+          income_chg_pct: comparativeData.quarter.changes.income,
+          expense_chg_pct: comparativeData.quarter.changes.expense,
+        } : null,
+        // Ano atual
+        year: comparativeData?.year ? {
+          label: comparativeData.year.labels[0],
+          income: comparativeData.year.curr.income,
+          expense: comparativeData.year.curr.expense,
+          balance: comparativeData.year.curr.balance,
+          savings: comparativeData.year.curr.savingsOut,
+          income_chg_pct: comparativeData.year.changes.income,
+          expense_chg_pct: comparativeData.year.changes.expense,
+        } : null,
+        // Metas e missões
+        goals: goals.map(g => ({
+          title: g.title,
+          target: g.target_amount,
+          current: g.current_amount,
+          status: g.status,
+          deadline: g.deadline,
+        })),
+        // Engajamento
+        streak_days: streak,
       };
       const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
       const res = await fetch(fnUrl, {
@@ -4306,6 +4347,9 @@ export default function Dashboard({ user }) {
         topCategories={topCategories}
         selectedMonth={selectedMonth}
         userEmail={user?.email}
+        comparativeData={comparativeData}
+        goals={goals}
+        streak={streak}
       />
 
       {/* ── Soraya IA Drawer ─────────────────────────────────────── */}

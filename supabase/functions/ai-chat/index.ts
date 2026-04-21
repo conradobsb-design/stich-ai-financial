@@ -5,9 +5,15 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const fmtBRL = (v: number) => {
+const fmt = (v: number) => {
   const n = isNaN(v) ? 0 : v;
   return 'R$ ' + n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
+const pctStr = (v: number | null | undefined) => {
+  if (v == null) return 'N/A';
+  const sign = v >= 0 ? '+' : '';
+  return `${sign}${v.toFixed(1)}%`;
 };
 
 const SYSTEM_PROMPT = `Você é Clara, consultora financeira pessoal da plataforma Extrato Co., criada pela Cortez Group.
@@ -38,6 +44,82 @@ Você NÃO recomenda ações, FIIs, criptomoedas ou ativos de risco específicos
 ## Regra fundamental
 Não invente números. Use APENAS os dados do contexto financeiro fornecido. Se não houver dados suficientes para responder com precisão, diga isso e ofereça um raciocínio baseado em princípios gerais.`;
 
+// deno-lint-ignore no-explicit-any
+const buildContextBlock = (ctx: any): string => {
+  const lines: string[] = [];
+
+  // ── Mês atual ──────────────────────────────────────────────────────────────
+  const savingsRate = ctx.income > 0 ? (ctx.savings / ctx.income * 100).toFixed(1) + '%' : 'N/A';
+  const expenseRate = ctx.income > 0 ? (ctx.expense / ctx.income * 100).toFixed(1) + '%' : 'N/A';
+
+  lines.push(`=== MÊS ATUAL (${ctx.month ?? 'não informado'}) ===`);
+  lines.push(`Receita:           ${fmt(ctx.income ?? 0)}`);
+  lines.push(`Despesas:          ${fmt(ctx.expense ?? 0)}  (${expenseRate} da receita)`);
+  lines.push(`Investimentos:     ${fmt(ctx.savings ?? 0)}  (taxa de poupança: ${savingsRate})`);
+  lines.push(`Saldo líquido:     ${fmt(ctx.balance ?? 0)}`);
+
+  if (Array.isArray(ctx.top_categories) && ctx.top_categories.length > 0) {
+    lines.push('');
+    lines.push('Maiores categorias de gasto:');
+    ctx.top_categories.forEach((c: { category: string; total: number }) => {
+      const pctOfExpense = ctx.expense > 0 ? ` (${(c.total / ctx.expense * 100).toFixed(1)}% das despesas)` : '';
+      lines.push(`  - ${c.category}: ${fmt(c.total)}${pctOfExpense}`);
+    });
+  }
+
+  // ── Comparativo mês anterior ───────────────────────────────────────────────
+  if (ctx.vs_last_month) {
+    const v = ctx.vs_last_month;
+    lines.push('');
+    lines.push(`=== COMPARATIVO — vs ${v.prev_label ?? 'mês anterior'} ===`);
+    lines.push(`Receita:   ${fmt(v.prev_income ?? 0)}  →  ${pctStr(v.income_chg_pct)} em relação ao mês atual`);
+    lines.push(`Despesas:  ${fmt(v.prev_expense ?? 0)}  →  ${pctStr(v.expense_chg_pct)} em relação ao mês atual`);
+    lines.push(`Saldo:     ${fmt(v.prev_balance ?? 0)}  →  ${pctStr(v.balance_chg_pct)} em relação ao mês atual`);
+  }
+
+  // ── Trimestre ──────────────────────────────────────────────────────────────
+  if (ctx.quarter) {
+    const q = ctx.quarter;
+    lines.push('');
+    lines.push(`=== TRIMESTRE (${q.label ?? 'atual'}) ===`);
+    lines.push(`Receita:       ${fmt(q.income ?? 0)}  (${pctStr(q.income_chg_pct)} vs trimestre anterior)`);
+    lines.push(`Despesas:      ${fmt(q.expense ?? 0)}  (${pctStr(q.expense_chg_pct)} vs trimestre anterior)`);
+    lines.push(`Saldo acum.:   ${fmt(q.balance ?? 0)}`);
+    lines.push(`Investido:     ${fmt(q.savings ?? 0)}`);
+  }
+
+  // ── Ano ────────────────────────────────────────────────────────────────────
+  if (ctx.year) {
+    const y = ctx.year;
+    lines.push('');
+    lines.push(`=== ANO (${y.label ?? 'atual'}) ===`);
+    lines.push(`Receita:       ${fmt(y.income ?? 0)}  (${pctStr(y.income_chg_pct)} vs ano anterior)`);
+    lines.push(`Despesas:      ${fmt(y.expense ?? 0)}  (${pctStr(y.expense_chg_pct)} vs ano anterior)`);
+    lines.push(`Saldo acum.:   ${fmt(y.balance ?? 0)}`);
+    lines.push(`Investido:     ${fmt(y.savings ?? 0)}`);
+  }
+
+  // ── Metas / Missões ────────────────────────────────────────────────────────
+  if (Array.isArray(ctx.goals) && ctx.goals.length > 0) {
+    lines.push('');
+    lines.push('=== METAS E MISSÕES ===');
+    ctx.goals.forEach((g: { title: string; target: number; current: number; status: string; deadline?: string }) => {
+      const progress = g.target > 0 ? ` — ${(g.current / g.target * 100).toFixed(0)}% concluído` : '';
+      const deadline = g.deadline ? ` | prazo: ${g.deadline}` : '';
+      lines.push(`  [${g.status}] ${g.title}: ${fmt(g.current ?? 0)} / ${fmt(g.target ?? 0)}${progress}${deadline}`);
+    });
+  }
+
+  // ── Streak ─────────────────────────────────────────────────────────────────
+  if (ctx.streak_days != null && ctx.streak_days > 0) {
+    lines.push('');
+    lines.push(`=== ENGAJAMENTO ===`);
+    lines.push(`Sequência de uso: ${ctx.streak_days} dias consecutivos`);
+  }
+
+  return lines.join('\n');
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS });
@@ -46,31 +128,7 @@ serve(async (req) => {
   try {
     const { message, context } = await req.json();
     const ctx = context ?? {};
-
-    const topCats = Array.isArray(ctx.top_categories) && ctx.top_categories.length > 0
-      ? ctx.top_categories.map((c: { category: string; total: number }) =>
-          `  - ${c.category}: ${fmtBRL(c.total)}`
-        ).join('\n')
-      : '  (sem dados registrados)';
-
-    const savingsRate = ctx.income > 0
-      ? ((ctx.savings ?? 0) / ctx.income * 100).toFixed(1) + '%'
-      : 'N/A';
-
-    const expenseRate = ctx.income > 0
-      ? ((ctx.expense ?? 0) / ctx.income * 100).toFixed(1) + '%'
-      : 'N/A';
-
-    const contextBlock = [
-      `=== DADOS FINANCEIROS — ${ctx.month ?? 'mês atual'} ===`,
-      `Entradas (receita):    ${fmtBRL(ctx.income ?? 0)}`,
-      `Saídas (despesas):     ${fmtBRL(ctx.expense ?? 0)}  (${expenseRate} da receita)`,
-      `Investimentos:         ${fmtBRL(ctx.savings ?? 0)}  (taxa de poupança: ${savingsRate})`,
-      `Saldo líquido:         ${fmtBRL(ctx.balance ?? 0)}`,
-      '',
-      'Maiores categorias de gasto:',
-      topCats,
-    ].join('\n');
+    const contextBlock = buildContextBlock(ctx);
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
