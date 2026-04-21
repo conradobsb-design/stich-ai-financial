@@ -1256,6 +1256,7 @@ function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, u
     setMessages(prev => [...prev, { role: 'user', text: question }]);
     setLoading(true);
     try {
+      if (!CHAT_URL) throw new Error('CHAT_URL_NOT_CONFIGURED');
       const context = {
         month: selectedMonth,
         income: aggregates.income,
@@ -1271,11 +1272,15 @@ function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, u
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'chat', message: question, user_email: userEmail, context }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       const reply = json.reply || json.message || json.output || 'Não consegui processar sua pergunta no momento.';
       setMessages(prev => [...prev, { role: 'assistant', text: reply }]);
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Erro ao conectar com o assistente. Tente novamente.' }]);
+    } catch (err) {
+      const msg = err?.message === 'CHAT_URL_NOT_CONFIGURED'
+        ? 'Assistente não configurado. Contate o suporte.'
+        : 'Erro ao conectar com o assistente. Tente novamente.';
+      setMessages(prev => [...prev, { role: 'assistant', text: msg }]);
     } finally {
       setLoading(false);
     }
