@@ -1229,6 +1229,7 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 function ChatDrawer({ open, onClose, aggregates, topCategories, selectedMonth, userEmail, comparativeData, goals = [], streak = 0 }) {
+  const { theme } = useApp();
   const [messages, setMessages] = React.useState([]);
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
