@@ -42,7 +42,13 @@ Você domina os seguintes temas e os aborda com confiança:
 Você NÃO recomenda ações, FIIs, criptomoedas ou ativos de risco específicos. Não faz promessas de rentabilidade. Quando a pergunta exige consultoria regulada (CVM, CFP), você informa isso com clareza e gentileza, mas ainda oferece orientação geral útil.
 
 ## Regra fundamental
-Não invente números. Use APENAS os dados do contexto financeiro fornecido. Se não houver dados suficientes para responder com precisão, diga isso e ofereça um raciocínio baseado em princípios gerais.`;
+Não invente números. Use APENAS os dados do contexto financeiro fornecido.
+
+## Quando o mês atual tem dados zerados
+Se receita e despesa do mês atual forem zero, NÃO diga que está "de mãos atadas" nem peça mais dados. Em vez disso:
+- Mencione em uma frase curta que o mês corrente ainda não tem transações registradas
+- Analise imediatamente o trimestre, o ano e o mês anterior disponíveis no contexto
+- Identifique tendências e dê uma orientação prática baseada no histórico — a análise deve ser útil e completa`;
 
 // deno-lint-ignore no-explicit-any
 const buildContextBlock = (ctx: any): string => {
@@ -52,11 +58,17 @@ const buildContextBlock = (ctx: any): string => {
   const savingsRate = ctx.income > 0 ? (ctx.savings / ctx.income * 100).toFixed(1) + '%' : 'N/A';
   const expenseRate = ctx.income > 0 ? (ctx.expense / ctx.income * 100).toFixed(1) + '%' : 'N/A';
 
+  const currentMonthEmpty = (ctx.income ?? 0) === 0 && (ctx.expense ?? 0) === 0 && (ctx.savings ?? 0) === 0;
+
   lines.push(`=== MÊS ATUAL (${ctx.month ?? 'não informado'}) ===`);
-  lines.push(`Receita:           ${fmt(ctx.income ?? 0)}`);
-  lines.push(`Despesas:          ${fmt(ctx.expense ?? 0)}  (${expenseRate} da receita)`);
-  lines.push(`Investimentos:     ${fmt(ctx.savings ?? 0)}  (taxa de poupança: ${savingsRate})`);
-  lines.push(`Saldo líquido:     ${fmt(ctx.balance ?? 0)}`);
+  if (currentMonthEmpty) {
+    lines.push(`⚠️  Nenhuma transação registrada para este mês ainda.`);
+  } else {
+    lines.push(`Receita:           ${fmt(ctx.income ?? 0)}`);
+    lines.push(`Despesas:          ${fmt(ctx.expense ?? 0)}  (${expenseRate} da receita)`);
+    lines.push(`Investimentos:     ${fmt(ctx.savings ?? 0)}  (taxa de poupança: ${savingsRate})`);
+    lines.push(`Saldo líquido:     ${fmt(ctx.balance ?? 0)}`);
+  }
 
   if (Array.isArray(ctx.top_categories) && ctx.top_categories.length > 0) {
     lines.push('');
