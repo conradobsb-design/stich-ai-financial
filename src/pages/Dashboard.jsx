@@ -2147,29 +2147,65 @@ export default function Dashboard({ user }) {
   // ── Detector de assinaturas recorrentes ────────────────────────────────────
   const subscriptions = useMemo(() => {
     if (!data.length) return [];
+
+    // Cobranças fixas da vida — NÃO são assinaturas de serviço
+    const BLOCKLIST = [
+      'aluguel', 'condominio', 'condomínio', 'iptu', 'ipva', 'agua ', 'água ',
+      'luz ', 'energia ', 'gas ', 'gás ', 'enel', 'cemig', 'copel', 'sabesp',
+      'sanepar', 'comgas', 'financiamento', 'parcela', 'prestacao', 'prestação',
+      'emprestimo', 'empréstimo', 'fgts', 'inss', 'imposto', 'tributo', 'darf',
+      'iss ', 'irpf', 'simples nacional', 'salario', 'salário', 'prolabore',
+      'pro-labore', 'rescisao', 'rescisão', 'folha', 'pensao', 'pensão',
+      'mensalidade escola', 'mensalidade colegio', 'mensalidade faculdade',
+      'plano de saude', 'plano saude', 'convenio medico', 'convênio médico',
+    ];
+
+    // Palavras que confirmam ser assinatura de serviço digital/físico
+    const SUBSCRIPTION_SIGNALS = [
+      'netflix', 'spotify', 'amazon', 'prime', 'disney', 'hbo', 'max ',
+      'apple', 'google', 'microsoft', 'adobe', 'dropbox', 'icloud',
+      'youtube', 'deezer', 'globoplay', 'paramount', 'star+', 'starz',
+      'academia', 'smartfit', 'bluefit', 'bodytech', 'crossfit',
+      'clube', 'assinatura', 'subscription', 'mensalidade',
+      'antivirus', 'mcafee', 'norton', 'kaspersky',
+      'vpn', 'hostinger', 'godaddy', 'locaweb', 'aws ', 'azure',
+      'slack', 'notion', 'figma', 'canva', 'github', 'chatgpt',
+      'plano ', 'plan ', 'recorrente',
+    ];
+
     const normalize = (s) => (s || '').toLowerCase()
       .normalize('NFD').replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+
+    const isBlocked = (key) => BLOCKLIST.some(b => key.includes(b));
+    const isSignal  = (key) => SUBSCRIPTION_SIGNALS.some(s => key.includes(s));
 
     const groups = {};
     data.forEach(item => {
       if (classifyTransaction(item) !== 'expense') return;
       const key = normalize(item.description);
       if (!key || key.length < 4) return;
-      if (!groups[key]) groups[key] = { label: item.description, items: [] };
+      if (isBlocked(key)) return;
+      if (!groups[key]) groups[key] = { label: item.description, items: [], signal: isSignal(key) };
       groups[key].items.push(item);
     });
 
     const result = [];
-    Object.values(groups).forEach(({ label, items }) => {
+    Object.values(groups).forEach(({ label, items, signal }) => {
       const months = new Set(items.map(i => i.transaction_date?.substring(0, 7)));
       if (months.size < 2) return;
+
       const amounts = items.map(i => Math.abs(i.amount));
       const avg = amounts.reduce((a, b) => a + b, 0) / amounts.length;
       const maxDev = Math.max(...amounts.map(a => Math.abs(a - avg) / (avg || 1)));
-      if (maxDev > 0.15) return;
+
+      // Assinaturas conhecidas: aceita até 20% de variação
+      // Candidatas genéricas: exige valor ≤ R$500 e variação ≤ 5%
+      if (signal  && maxDev > 0.20) return;
+      if (!signal && (maxDev > 0.05 || avg > 500)) return;
+
       const sorted = [...items].sort((a, b) => (b.transaction_date || '').localeCompare(a.transaction_date || ''));
-      result.push({ label, monthlyAmount: avg, occurrences: items.length, months: months.size, lastDate: sorted[0]?.transaction_date });
+      result.push({ label, monthlyAmount: avg, occurrences: items.length, months: months.size, lastDate: sorted[0]?.transaction_date, signal });
     });
 
     return result.sort((a, b) => b.monthlyAmount - a.monthlyAmount).slice(0, 12);
