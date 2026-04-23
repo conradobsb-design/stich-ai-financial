@@ -20,7 +20,7 @@ import {
   Home, LayoutList, BarChart2, User, Bell, Settings, Lock, HelpCircle,
   Crown, Star, TrendingUp as TrendUpIcon, BrainCircuit,
   Target, Flame, Trophy, Award, Gem,
-  Medal, ChevronUp, ArchiveX
+  Medal, ChevronUp, ArchiveX, RefreshCw
 } from 'lucide-react';
 import { useApp, maskBRL } from '../contexts/AppContext.jsx';
 import { useSEO } from '../hooks/useSEO';
@@ -2144,6 +2144,37 @@ export default function Dashboard({ user }) {
     return Object.entries(cats).sort((a,b) => b[1] - a[1]).slice(0, 3);
   }, [monthlyData]);
 
+  // ── Detector de assinaturas recorrentes ────────────────────────────────────
+  const subscriptions = useMemo(() => {
+    if (!data.length) return [];
+    const normalize = (s) => (s || '').toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+
+    const groups = {};
+    data.forEach(item => {
+      if (classifyTransaction(item) !== 'expense') return;
+      const key = normalize(item.description);
+      if (!key || key.length < 4) return;
+      if (!groups[key]) groups[key] = { label: item.description, items: [] };
+      groups[key].items.push(item);
+    });
+
+    const result = [];
+    Object.values(groups).forEach(({ label, items }) => {
+      const months = new Set(items.map(i => i.transaction_date?.substring(0, 7)));
+      if (months.size < 2) return;
+      const amounts = items.map(i => Math.abs(i.amount));
+      const avg = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+      const maxDev = Math.max(...amounts.map(a => Math.abs(a - avg) / (avg || 1)));
+      if (maxDev > 0.15) return;
+      const sorted = [...items].sort((a, b) => (b.transaction_date || '').localeCompare(a.transaction_date || ''));
+      result.push({ label, monthlyAmount: avg, occurrences: items.length, months: months.size, lastDate: sorted[0]?.transaction_date });
+    });
+
+    return result.sort((a, b) => b.monthlyAmount - a.monthlyAmount).slice(0, 12);
+  }, [data]);
+
   // Auto-sync metas com dados do mês atual
   useEffect(() => {
     if (!goals.length) return;
@@ -3665,6 +3696,62 @@ export default function Dashboard({ user }) {
                 );
               })}
             </div>
+          </motion.section>
+        )}
+
+        {/* ── Assinaturas Recorrentes ─────────────────────────────────────── */}
+        {subscriptions.length > 0 && (
+          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <RefreshCw size={16} className="text-primary" />
+                <h3 className="text-sm font-black text-white uppercase tracking-widest">Assinaturas Detectadas</h3>
+              </div>
+              <div className="flex items-center gap-1.5 bg-error/10 border border-error/20 rounded-xl px-3 py-1">
+                <span className="text-[10px] font-black text-error uppercase tracking-wider">Total/mês</span>
+                <span className="text-sm font-black text-error">
+                  R$ {subscriptions.reduce((s, x) => s + x.monthlyAmount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {subscriptions.map((sub, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.05 * i }}
+                  className="glass-card rounded-2xl px-4 py-3 flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                      <RefreshCw size={14} className="text-primary/70" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate capitalize">
+                        {sub.label.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).substring(0, 32)}
+                      </p>
+                      <p className="text-[11px] text-on-surface-variant">
+                        {sub.months} meses detectados · última em {sub.lastDate ? new Date(sub.lastDate + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }) : '—'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-black text-white">
+                      R$ {sub.monthlyAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-[10px] text-on-surface-variant">
+                      R$ {(sub.monthlyAmount * 12).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}/ano
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            <p className="text-[10px] text-on-surface-variant/50 text-center mt-3">
+              Cobranças com valor consistente em 2+ meses. Revise e cancele o que não usa.
+            </p>
           </motion.section>
         )}
 
