@@ -2148,64 +2148,66 @@ export default function Dashboard({ user }) {
   const subscriptions = useMemo(() => {
     if (!data.length) return [];
 
-    // Cobranças fixas da vida — NÃO são assinaturas de serviço
-    const BLOCKLIST = [
-      'aluguel', 'condominio', 'condomínio', 'iptu', 'ipva', 'agua ', 'água ',
-      'luz ', 'energia ', 'gas ', 'gás ', 'enel', 'cemig', 'copel', 'sabesp',
-      'sanepar', 'comgas', 'financiamento', 'parcela', 'prestacao', 'prestação',
-      'emprestimo', 'empréstimo', 'fgts', 'inss', 'imposto', 'tributo', 'darf',
-      'iss ', 'irpf', 'simples nacional', 'salario', 'salário', 'prolabore',
-      'pro-labore', 'rescisao', 'rescisão', 'folha', 'pensao', 'pensão',
-      'mensalidade escola', 'mensalidade colegio', 'mensalidade faculdade',
-      'plano de saude', 'plano saude', 'convenio medico', 'convênio médico',
-    ];
-
-    // Palavras que confirmam ser assinatura de serviço digital/físico
-    const SUBSCRIPTION_SIGNALS = [
-      'netflix', 'spotify', 'amazon', 'prime', 'disney', 'hbo', 'max ',
-      'apple', 'google', 'microsoft', 'adobe', 'dropbox', 'icloud',
-      'youtube', 'deezer', 'globoplay', 'paramount', 'star+', 'starz',
-      'academia', 'smartfit', 'bluefit', 'bodytech', 'crossfit',
-      'clube', 'assinatura', 'subscription', 'mensalidade',
-      'antivirus', 'mcafee', 'norton', 'kaspersky',
-      'vpn', 'hostinger', 'godaddy', 'locaweb', 'aws ', 'azure',
-      'slack', 'notion', 'figma', 'canva', 'github', 'chatgpt',
-      'plano ', 'plan ', 'recorrente',
+    // Só entra se a descrição contiver ao menos um desses termos
+    const KNOWN_SERVICES = [
+      // Streaming vídeo
+      'netflix', 'spotify', 'amazon prime', 'amazon video', 'disney', 'hbo', 'max ',
+      'globoplay', 'paramount', 'star+', 'starz', 'apple tv', 'mubi', 'looke',
+      'telecine', 'claro video', 'oi play',
+      // Streaming música
+      'deezer', 'tidal', 'youtube music', 'youtube premium',
+      // Cloud / software
+      'icloud', 'google one', 'google storage', 'dropbox', 'onedrive',
+      'adobe', 'canva', 'figma', 'notion', 'slack', 'github', 'chatgpt',
+      'openai', 'microsoft 365', 'office 365', 'hostinger', 'godaddy',
+      'locaweb', 'shopify', 'linktree', 'mailchimp',
+      // Segurança digital
+      'mcafee', 'norton', 'kaspersky', 'avast', 'bitdefender', 'expressvpn', 'nordvpn',
+      // Academias / fitness
+      'smartfit', 'bluefit', 'bodytech', 'crossfit', 'gympass', 'totalpass',
+      // Planos de saúde / app
+      'hapvida', 'unimed', 'bradesco saude', 'amil', 'sulamerica', 'notredame',
+      // Assinatura explícita
+      'assinatura', 'subscription', 'recorrente', 'plano mensal', 'plano anual',
+      // Plataformas de cursos
+      'hotmart', 'kiwify', 'eduzz', 'monetizze', 'coursera', 'udemy', 'alura',
+      // Telecom
+      'claro ', 'vivo ', 'tim ', 'oi ', 'nextel', 'sky ', 'net ',
+      // Outros serviços conhecidos
+      'rappi prime', 'ifood', 'uber one', '99 pop', 'waze', 'duolingo',
     ];
 
     const normalize = (s) => (s || '').toLowerCase()
       .normalize('NFD').replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
 
-    const isBlocked = (key) => BLOCKLIST.some(b => key.includes(b));
-    const isSignal  = (key) => SUBSCRIPTION_SIGNALS.some(s => key.includes(s));
+    const isKnown = (key) => KNOWN_SERVICES.some(s => key.includes(normalize(s)));
 
     const groups = {};
     data.forEach(item => {
       if (classifyTransaction(item) !== 'expense') return;
       const key = normalize(item.description);
       if (!key || key.length < 4) return;
-      if (isBlocked(key)) return;
-      if (!groups[key]) groups[key] = { label: item.description, items: [], signal: isSignal(key) };
+      if (!isKnown(key)) return; // só serviços conhecidos
+      if (!groups[key]) groups[key] = { label: item.description, items: [] };
       groups[key].items.push(item);
     });
 
     const result = [];
-    Object.values(groups).forEach(({ label, items, signal }) => {
+    Object.values(groups).forEach(({ label, items }) => {
       const months = new Set(items.map(i => i.transaction_date?.substring(0, 7)));
       if (months.size < 2) return;
-
       const amounts = items.map(i => Math.abs(i.amount));
       const avg = amounts.reduce((a, b) => a + b, 0) / amounts.length;
       const maxDev = Math.max(...amounts.map(a => Math.abs(a - avg) / (avg || 1)));
-
-      // Assinaturas conhecidas: aceita até 20% de variação
-      // Candidatas genéricas: exige valor ≤ R$500 e variação ≤ 5%
-      if (signal  && maxDev > 0.20) return;
-      if (!signal && (maxDev > 0.05 || avg > 500)) return;
-
+      if (maxDev > 0.25) return; // preço mudou muito — não é assinatura estável
       const sorted = [...items].sort((a, b) => (b.transaction_date || '').localeCompare(a.transaction_date || ''));
-      result.push({ label, monthlyAmount: avg, occurrences: items.length, months: months.size, lastDate: sorted[0]?.transaction_date, signal });
+      const rawDate = sorted[0]?.transaction_date;
+      const lastDate = rawDate ? (() => {
+        const d = new Date(rawDate.substring(0,10) + 'T12:00:00');
+        return isNaN(d) ? null : d.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' });
+      })() : null;
+      result.push({ label, monthlyAmount: avg, months: months.size, lastDate });
     });
 
     return result.sort((a, b) => b.monthlyAmount - a.monthlyAmount).slice(0, 12);
@@ -3769,7 +3771,7 @@ export default function Dashboard({ user }) {
                         {sub.label.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).substring(0, 32)}
                       </p>
                       <p className="text-[11px] text-on-surface-variant">
-                        {sub.months} meses detectados · última em {sub.lastDate ? new Date(sub.lastDate + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }) : '—'}
+                        {sub.months} meses detectados · última em {sub.lastDate ?? '—'}
                       </p>
                     </div>
                   </div>
