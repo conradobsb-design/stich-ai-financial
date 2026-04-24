@@ -2789,8 +2789,8 @@ export default function Dashboard({ user }) {
           );
         })()}
 
-        {/* ── Missões ── */}
-        {(() => {
+        {/* Missões, Conquistas e Ranking removidos */}
+        {false && (() => {
           const { theme: _tm } = useApp();
           const isLM = _tm === 'light';
           const acc = isWarm ? '#e8a020' : '#0ea5e9';
@@ -2908,8 +2908,8 @@ export default function Dashboard({ user }) {
           );
         })()}
 
-        {/* ── Conquistas ── */}
-        {(() => {
+        {/* ── Conquistas ── (removido) */}
+        {false && (() => {
           const { theme: _t } = useApp();
           const isLightMode = _t === 'light';
           const accent = isWarm ? '#e8a020' : '#0ea5e9';
@@ -3010,8 +3010,8 @@ export default function Dashboard({ user }) {
           );
         })()}
 
-        {/* ── Ranking ── */}
-        {(() => {
+        {/* ── Ranking ── (removido) */}
+        {false && (() => {
           const { theme: _tr } = useApp();
           const isLR = _tr === 'light';
           const acc = isWarm ? '#e8a020' : '#0ea5e9';
