@@ -87,7 +87,7 @@ const CATEGORY_COLORS_WARM = {
   'Outros':                '#8a6a50', // muted brown
 };
 
-const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
+const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-statement`;
 // CHAT_URL mantido para compatibilidade; assistente usa supabase.functions.invoke
 
 // ── Hook Model — Milestones de Streak ──
@@ -1894,7 +1894,10 @@ export default function Dashboard({ user }) {
 
       const n8nRes = await fetch(WEBHOOK_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
         body: JSON.stringify(payload),
       });
 
