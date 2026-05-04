@@ -66,7 +66,7 @@ serve(async (req) => {
 
     const apiKey     = Deno.env.get('ANTHROPIC_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const serviceKey  = Deno.env.get('SERVICE_ROLE_KEY')!;
     if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
 
     const supabase = createClient(supabaseUrl, serviceKey, { db: { schema: 'stich_ai' } });

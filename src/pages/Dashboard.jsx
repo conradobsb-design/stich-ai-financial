@@ -87,7 +87,7 @@ const CATEGORY_COLORS_WARM = {
   'Outros':                '#8a6a50', // muted brown
 };
 
-const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-statement`;
+const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/smooth-action`;
 // CHAT_URL mantido para compatibilidade; assistente usa supabase.functions.invoke
 
 // ── Hook Model — Milestones de Streak ──
